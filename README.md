@@ -60,8 +60,8 @@ AegisRuntime is architected with modern, modular, production-ready technologies:
 
 ### Step 1: Clone the Repository
 ```bash
-git clone https://github.com/reyanatifbsse-2021a-alt/Project_hackathon.git
-cd Project_hackathon
+git clone https://github.com/wania-shah/aegisruntime.git
+cd aegisruntime
 ```
 
 ### Step 2: Create and Activate Virtual Environment
