@@ -597,3 +597,32 @@ def get_evidence_record(entity_id: str):
         res["data"] = json.loads(res["data_json"])
         return res
     return None
+
+
+def get_system_stats() -> Dict[str, Any]:
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT COUNT(*) FROM audit_logs")
+    total_audit = cursor.fetchone()[0]
+
+    cursor.execute("SELECT COUNT(*) FROM audit_logs WHERE decision IN ('BLOCK', 'HUMAN_REVIEW')")
+    total_interventions = cursor.fetchone()[0]
+
+    cursor.execute("SELECT COUNT(*) FROM audit_logs WHERE decision = 'ALLOW'")
+    total_tokens = cursor.fetchone()[0]
+
+    cursor.execute("SELECT COUNT(*) FROM human_reviews WHERE status = 'PENDING'")
+    pending_reviews = cursor.fetchone()[0]
+
+    cursor.execute("SELECT COUNT(*) FROM policies WHERE enabled = 1")
+    active_policies = cursor.fetchone()[0]
+
+    conn.close()
+    return {
+        "total_audit_events": total_audit,
+        "total_interventions": total_interventions,
+        "tokens_minted": total_tokens,
+        "pending_reviews": pending_reviews,
+        "active_policies": active_policies
+    }
+

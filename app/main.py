@@ -19,7 +19,7 @@ from app.core.models import (
 from app.core.database import (
     init_db, query_audit_logs, export_audit_logs_csv, get_all_policies,
     update_policy_status, add_or_update_policy, get_pending_human_reviews,
-    resolve_human_review, get_db
+    resolve_human_review, get_db, get_system_stats
 )
 from app.agent.planner import TaskPlanner
 from app.agent.executor import WorkflowExecutor
@@ -49,12 +49,20 @@ if os.path.exists(STATIC_DIR):
     app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 
-@app.get("/")
+@app.api_route("/", methods=["GET", "HEAD"])
 def read_root():
     index_path = os.path.join(STATIC_DIR, "index.html")
     if os.path.exists(index_path):
         return FileResponse(index_path)
     return {"message": "AegisRuntime API is running. Web UI loading..."}
+
+
+@app.get("/api/stats")
+def get_stats():
+    stats = get_system_stats()
+    stats["fail_closed_mode"] = is_engine_offline()
+    stats["active_tasks_count"] = len(_ACTIVE_PLANS)
+    return stats
 
 
 # -------------------------------------------------------------
