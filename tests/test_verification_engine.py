@@ -7,11 +7,10 @@ un-tampered, non-reusable token issued by the Verification Engine.
 import pytest
 from app.core.security import (
     generate_action_execution_token,
-    verify_and_consume_token,
     SecurityViolationException
 )
 from app.tools.tool_implementations import ExportDataTool, WireTransferTool
-from app.verification.chaos import set_engine_offline, is_engine_offline, reset_chaos
+from app.verification.chaos import set_engine_offline, reset_chaos
 from app.verification.verifier import ActionVerificationEngine
 from app.core.models import ProposedAction, SectorProfile, Decision, RiskCategory
 

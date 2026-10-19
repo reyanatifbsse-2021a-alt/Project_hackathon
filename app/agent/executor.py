@@ -7,11 +7,10 @@ unrelated safe work.
 
 from typing import Dict, Any, List, Set, Optional
 from app.core.models import (
-    TaskPlan, TaskStep, StepStatus, Decision, SectorProfile, VerificationResult, RiskCategory
+    TaskPlan, StepStatus, Decision, VerificationResult, RiskCategory, ProposedAction
 )
 from app.verification.verifier import ActionVerificationEngine
 from app.tools.sandbox import ToolRegistry
-import time
 
 
 class WorkflowExecutor:
@@ -23,16 +22,39 @@ class WorkflowExecutor:
         self.verifier = ActionVerificationEngine()
         self.tool_registry = ToolRegistry()
 
+    def _enrich_action_parameters(self, action: Optional[ProposedAction], deps: List[str], step_outputs: Dict[str, Any]):
+        """Dynamically pipes live data observed in upstream steps into downstream actions."""
+        if not action or not deps:
+            return
+        for d in deps:
+            out = step_outputs.get(d, {})
+            data = out.get("data", {})
+            if isinstance(data, dict):
+                # Clinical live data propagation
+                if "egfr" in data and "egfr" in action.parameters:
+                    action.parameters["egfr"] = data["egfr"]
+                if "allergies" in data and "patient_allergies" in action.parameters:
+                    allergies = data.get("allergies", [])
+                    action.parameters["patient_allergies"] = ", ".join(allergies) if isinstance(allergies, list) else str(allergies)
+                # Financial live balance propagation
+                if "balance" in data:
+                    action.parameters["source_balance"] = data["balance"]
+                if "kyc_status" in data:
+                    action.parameters["kyc_status"] = data["kyc_status"]
+                # SecOps resource status propagation
+                if "status" in data:
+                    action.parameters["resource_status"] = data["status"]
+
     def execute_plan(self, plan: TaskPlan) -> TaskPlan:
         """
         Executes a task plan step-by-step according to dependency constraints.
         Safe independent branches continue even if one branch is blocked.
         """
-        steps_by_id = {s.step_id: s for s in plan.steps}
         executed_ids: Set[str] = {s.step_id for s in plan.steps if s.status == StepStatus.EXECUTED}
         blocked_ids: Set[str] = {s.step_id for s in plan.steps if s.status == StepStatus.BLOCKED}
         paused_ids: Set[str] = {s.step_id for s in plan.steps if s.status == StepStatus.PAUSED_DEPENDENCY}
         held_ids: Set[str] = {s.step_id for s in plan.steps if s.status == StepStatus.HELD_FOR_REVIEW}
+        step_outputs: Dict[str, Any] = {}
 
         # Iterate until all steps have reached a terminal or paused state
         changed = True
@@ -65,6 +87,7 @@ class WorkflowExecutor:
                 # Step is ready for execution!
                 changed = True
                 action = step.proposed_action
+                self._enrich_action_parameters(action, deps, step_outputs)
 
                 if not action or not action.is_protected:
                     # Safe read-only / unprotected action
@@ -75,6 +98,7 @@ class WorkflowExecutor:
                     step.status = StepStatus.EXECUTED
                     step.execution_result = exec_res
                     executed_ids.add(step.step_id)
+                    step_outputs[step.step_id] = exec_res
                     continue
 
                 # Point-of-action runtime intervention
@@ -82,7 +106,8 @@ class WorkflowExecutor:
                     task_id=plan.task_id,
                     user_request=plan.user_request,
                     action=action,
-                    sector=plan.sector
+                    sector=plan.sector,
+                    user_id=getattr(plan, "user_id", "usr-superadmin")
                 )
                 step.verification_result = verification
 
@@ -96,6 +121,7 @@ class WorkflowExecutor:
                     step.status = StepStatus.EXECUTED
                     step.execution_result = exec_res
                     executed_ids.add(step.step_id)
+                    step_outputs[step.step_id] = exec_res
 
                 elif verification.decision == Decision.HUMAN_REVIEW:
                     # Sensitive action held in clearinghouse queue
@@ -193,6 +219,7 @@ class WorkflowExecutor:
         blocked_ids: Set[str] = {s.step_id for s in plan.steps if s.status == StepStatus.BLOCKED}
         paused_ids: Set[str] = {s.step_id for s in plan.steps if s.status == StepStatus.PAUSED_DEPENDENCY}
         held_ids: Set[str] = {s.step_id for s in plan.steps if s.status == StepStatus.HELD_FOR_REVIEW}
+        step_outputs: Dict[str, Any] = {}
 
         changed = True
         while changed:
@@ -227,13 +254,15 @@ class WorkflowExecutor:
 
                 changed = True
                 action = step.proposed_action
+                self._enrich_action_parameters(action, deps, step_outputs)
 
-                # Emit Step Start / Agent Thought event
+                # Emit Step Start / Agent Thought event with cognitive context
+                thought_context = "Piping verified live parameters from upstream step(s). " if (deps and any(d in step_outputs for d in deps)) else ""
                 yield {
                     "event": "STEP_START",
                     "step_id": step.step_id,
                     "title": step.title,
-                    "thought": f"Agent formulating action: Calling tool '{action.tool_name if action else 'none'}' to {step.description.lower()}",
+                    "thought": f"Agent Cognitive Synthesis: {thought_context}Invoking tool '{action.tool_name if action else 'none'}' to {step.description.lower()}",
                     "step": step.dict()
                 }
 
@@ -245,6 +274,7 @@ class WorkflowExecutor:
                     step.status = StepStatus.EXECUTED
                     step.execution_result = exec_res
                     executed_ids.add(step.step_id)
+                    step_outputs[step.step_id] = exec_res
                     yield {
                         "event": "STEP_EXECUTED",
                         "step_id": step.step_id,
@@ -260,7 +290,8 @@ class WorkflowExecutor:
                     task_id=plan.task_id,
                     user_request=plan.user_request,
                     action=action,
-                    sector=plan.sector
+                    sector=plan.sector,
+                    user_id=getattr(plan, "user_id", "usr-superadmin")
                 )
                 step.verification_result = verification
 
@@ -286,6 +317,7 @@ class WorkflowExecutor:
                     step.status = StepStatus.EXECUTED
                     step.execution_result = exec_res
                     executed_ids.add(step.step_id)
+                    step_outputs[step.step_id] = exec_res
                     yield {
                         "event": "STEP_EXECUTED",
                         "step_id": step.step_id,

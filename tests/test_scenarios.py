@@ -3,7 +3,6 @@ AegisRuntime - All 6 Required Demonstration Scenarios End-to-End Tests
 Validates the exact expected results specified in the Hackathon brief.
 """
 
-import pytest
 from app.agent.planner import TaskPlanner
 from app.agent.executor import WorkflowExecutor
 from app.core.models import SectorProfile, StepStatus, Decision, RiskCategory, ClaimVerificationRequest, ClaimStatus

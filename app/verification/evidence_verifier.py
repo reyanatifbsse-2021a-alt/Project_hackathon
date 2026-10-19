@@ -9,10 +9,9 @@ Evaluates data schemas and returns:
 Flags and holds claims to prevent hallucinations from propagating.
 """
 
-from typing import Dict, Any, Optional
 import time
 from app.core.models import (
-    ClaimStatus, ClaimVerificationRequest, ClaimVerificationRecord, SectorProfile
+    ClaimStatus, ClaimVerificationRequest, ClaimVerificationRecord
 )
 from app.core.database import get_evidence_record
 

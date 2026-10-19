@@ -21,7 +21,13 @@
       <svg style="width: 20px; height: 20px; fill: currentColor;" viewBox="0 0 24 24"><path d="M12 2L1 21h22L12 2zm0 3.5L20 19H4L12 5.5zM11 10v4h2v-4h-2zm0 6v2h2v-2h-2z"/></svg>
       <span><strong>FAIL-CLOSED SAFETY ENGAGED:</strong> Verification Engine is OFFLINE. All protected tool invocations unconditionally blocked at point-of-action.</span>
     </div>
-    <span style="font-size: 0.7rem; text-transform: uppercase; background: rgba(0,0,0,0.3); padding: 0.2rem 0.5rem; border-radius: 4px; font-weight: 700;">Scenario 5 Active</span>
+    <div style="display: flex; align-items: center; gap: 0.75rem;">
+      <button id="btnRestoreEngine" class="btn-restore-engine" onclick="window.restoreEngineOnline()">
+        <svg viewBox="0 0 24 24" style="width: 14px; height: 14px; fill: currentColor;"><path d="M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6 0 1.01-.25 1.97-.7 2.8l1.46 1.46C19.54 15.03 20 13.57 20 12c0-4.42-3.58-8-8-8zm0 14c-3.31 0-6-2.69-6-6 0-1.01.25-1.97.7-2.8L5.24 7.74C4.46 8.97 4 10.43 4 12c0 4.42 3.58 8 8 8v3l4-4-4-4v3z"/></svg>
+        Restore Engine Online
+      </button>
+      <span style="font-size: 0.7rem; text-transform: uppercase; background: rgba(0,0,0,0.3); padding: 0.2rem 0.5rem; border-radius: 4px; font-weight: 700;">Simulated Outage</span>
+    </div>
   </div>
 
   <!-- Sleek Modern Top Navigation Bar -->
@@ -44,36 +50,56 @@
 
       <!-- Navigation Tabs (The Proper Pages) -->
       <nav class="app-nav-tabs">
-        <button id="navTabCockpit" class="nav-tab-btn active" data-tab="cockpit">
+        <button id="navTabCockpit" class="nav-tab-btn active" data-tab="cockpit" title="Mission Studio & Workflow Continuity DAG">
           <svg viewBox="0 0 24 24"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg>
-          Mission Studio
+          <span>Mission</span>
         </button>
-        <button id="navTabReviews" class="nav-tab-btn" data-tab="reviews">
+        <button id="navTabReviews" class="nav-tab-btn" data-tab="reviews" title="Dual-Control Clearance & Human Signoff">
           <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/></svg>
-          Dual Approvals
+          <span>Approvals</span>
           <span id="reviewBadge" class="status-badge badge-held nav-count-pill" style="display: none;">0</span>
         </button>
-        <button id="navTabClaims" class="nav-tab-btn" data-tab="claims">
+        <button id="navTabClaims" class="nav-tab-btn" data-tab="claims" title="Ground-Truth Claim & Evidence Verification">
           <svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
-          Evidence Lab
+          <span>Evidence</span>
         </button>
-        <button id="navTabPolicies" class="nav-tab-btn" data-tab="policies">
+        <button id="navTabPolicies" class="nav-tab-btn" data-tab="policies" title="Point-of-Action Sector Security Policies">
           <svg viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>
-          Policy Rules
+          <span>Policies</span>
         </button>
-        <button id="navTabAudit" class="nav-tab-btn" data-tab="audit">
+        <button id="navTabAudit" class="nav-tab-btn" data-tab="audit" title="Cryptographic Tamper-Evident Audit Ledger">
           <svg viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>
-          Audit Trail
+          <span>Audit</span>
         </button>
-        <button id="navTabChaos" class="nav-tab-btn" data-tab="chaos">
+        <button id="navTabChaos" class="nav-tab-btn" data-tab="chaos" title="Chaos Engineering Fail-Closed Verification Outage">
           <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
-          Chaos Safety
+          <span>Chaos</span>
+        </button>
+        <button id="navTabBackend" class="nav-tab-btn" data-tab="backend" title="Live SQLite Database & System State Explorer">
+          <svg viewBox="0 0 24 24"><path d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H8V4h12v12zm-7-2h2v-2h-2v2zm0-4h2V6h-2v4z"/></svg>
+          <span>Backend</span>
+        </button>
+        <button id="navTabTraining" class="nav-tab-btn" data-tab="training" title="Agent Knowledge Base & Safety Training Curriculum">
+          <svg viewBox="0 0 24 24"><path d="M12 3L1 9l4 2.18v6L12 21l7-3.82v-6l2-1.09V17h2V9L12 3zm6.82 6L12 12.72 5.18 9 12 5.28 18.82 9zM17 15.99l-5 2.73-5-2.73v-3.72L12 15l5-2.73v3.72z"/></svg>
+          <span>Brain</span>
         </button>
       </nav>
 
-      <!-- Right Controls: Sector, Theme & KPI summary -->
+      <!-- Right Controls: Tour, Arch, Sector, Theme -->
       <div class="header-right-tools">
         
+        <!-- Interactive Judge Tour -->
+        <button id="btnGuidedTour" class="btn-guided-tour" onclick="startGuidedTour()" title="Interactive walkthrough of core safety features">
+          <span class="tour-sparkle">✨</span>
+          <span>Tour</span>
+        </button>
+
+        <!-- Technical Architecture Diagram Modal Trigger -->
+        <button id="btnArchDiagram" class="btn-arch-diagram" onclick="openArchModal()" title="View technical system architecture & security gating flow">
+          <svg viewBox="0 0 24 24" style="width: 13px; height: 13px; fill: currentColor;"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 2h6v4h-6V5zm-6 0h4v4H6V5zm0 6h4v4H6v-4zm6 0h6v4h-6v-4zm-6 6h4v4H6v-4zm6 0h6v4h-6v-4z"/></svg>
+          <span>Arch</span>
+        </button>
+
         <!-- Sector Profile Selector -->
         <div class="tool-dropdown-wrap">
           <span class="tool-dropdown-label">SECTOR</span>
@@ -93,6 +119,70 @@
             <option value="emerald">🌲 Cyber Emerald</option>
             <option value="light">☀️ Enterprise Light</option>
           </select>
+        </div>
+
+        <!-- User Profile & RBAC Role Badge -->
+        <div class="user-profile-menu-wrap">
+          <button id="btnUserProfile" class="btn-user-profile" onclick="toggleUserDropdown()" title="Click to view profile, switch roles, or manage users">
+            <span class="user-avatar-badge" id="headerUserAvatar">👑</span>
+            <div class="user-profile-text">
+              <span class="user-role-tag" id="headerUserRole">SUPERADMIN</span>
+              <span class="user-name-tag" id="headerUserName">Wania</span>
+            </div>
+            <svg viewBox="0 0 24 24" class="user-dropdown-caret"><path d="M7 10l5 5 5-5z"/></svg>
+          </button>
+
+          <!-- Dropdown Menu -->
+          <div id="userDropdownMenu" class="user-dropdown-menu">
+            <div class="user-menu-header">
+              <div class="user-menu-avatar" id="dropdownAvatar">👑</div>
+              <div style="overflow: hidden;">
+                <div class="user-menu-fullname" id="dropdownFullName">Wania (SuperAdmin)</div>
+                <div class="user-menu-email" id="dropdownEmail">admin@aegis.runtime</div>
+                <div class="user-menu-clearance" id="dropdownClearance">Clearance: Level 5 (Root Authority)</div>
+              </div>
+            </div>
+
+            <div class="user-menu-divider"></div>
+            <div class="user-menu-section-label">SWITCH DEMO PERSONA:</div>
+
+            <div class="user-persona-grid">
+              <button type="button" class="btn-persona-pill active" onclick="switchDemoPersona('superadmin')" title="Full control: policies, chaos, dual approvals">
+                <span>👑 SuperAdmin</span>
+              </button>
+              <button type="button" class="btn-persona-pill" onclick="switchDemoPersona('compliance')" title="Clearance approvals and policy gating">
+                <span>⚖️ Compliance</span>
+              </button>
+              <button type="button" class="btn-persona-pill" onclick="switchDemoPersona('operator')" title="Can execute missions, cannot approve reviews">
+                <span>⚡ Operator</span>
+              </button>
+              <button type="button" class="btn-persona-pill" onclick="switchDemoPersona('auditor')" title="Read-only access to audit trail and dossier">
+                <span>👁️ Auditor</span>
+              </button>
+            </div>
+
+            <div class="user-menu-divider"></div>
+
+            <button type="button" class="user-menu-action-btn" onclick="openUserRegistryModal()">
+              <svg viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
+              <span>Manage All Registered Users</span>
+            </button>
+
+            <button type="button" class="user-menu-action-btn" onclick="openAuthModal('signin')">
+              <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/></svg>
+              <span>Sign In with Another Account</span>
+            </button>
+
+            <button type="button" class="user-menu-action-btn" onclick="openAuthModal('register')">
+              <svg viewBox="0 0 24 24"><path d="M15 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm-9-2V7H4v3H1v2h3v3h2v-3h3v-2H6zm9 4c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+              <span>Register New User / SuperAdmin</span>
+            </button>
+
+            <button type="button" class="user-menu-action-btn logout-btn" onclick="handleLogout()">
+              <svg viewBox="0 0 24 24"><path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"/></svg>
+              <span>Sign Out</span>
+            </button>
+          </div>
         </div>
 
       </div>
@@ -121,40 +211,40 @@
           <div class="scenario-card" onclick="triggerScenario('scenario-1')" id="scCard-1">
             <div class="sc-card-top">
               <span class="sc-badge health">Healthcare</span>
-              <span class="sc-outcome block">Will Block Overdose</span>
+              <span class="sc-outcome block">Will Block PHI Egress</span>
             </div>
-            <div class="sc-card-title">1. Clinical Overdose Prevention</div>
-            <div class="sc-card-desc">Lethal Heparin 100mg push is blocked at Point-of-Action; safe IV saline hydration continues smoothly.</div>
+            <div class="sc-card-title">1. Unauthorised Data Egress</div>
+            <div class="sc-card-desc">AI agent attempts to export sensitive patient PHI to external endpoint; blocked at Point-of-Action (HIPAA protection).</div>
           </div>
 
           <!-- S2 -->
           <div class="scenario-card" onclick="triggerScenario('scenario-2')" id="scCard-2">
             <div class="sc-card-top">
               <span class="sc-badge fintech">Fintech</span>
-              <span class="sc-outcome held">Requires Dual-Signoff</span>
+              <span class="sc-outcome block">Neutralizes Injection</span>
             </div>
-            <div class="sc-card-title">2. Dual-Control Wire Transfer</div>
-            <div class="sc-card-desc">$250,000 treasury disbursement exceeds single-agent ceiling; held until human clearinghouse authorization.</div>
+            <div class="sc-card-title">2. Prompt Injection Override</div>
+            <div class="sc-card-desc">Vendor invoice containing embedded system override to divert $250k to unapproved shell account is detected and blocked.</div>
           </div>
 
           <!-- S3 -->
           <div class="scenario-card" onclick="triggerScenario('scenario-3')" id="scCard-3">
             <div class="sc-card-top">
               <span class="sc-badge secops">Defense SecOps</span>
-              <span class="sc-outcome block">Neutralizes Injection</span>
+              <span class="sc-outcome allow">Safe Continuity</span>
             </div>
-            <div class="sc-card-title">3. Indirect Prompt Injection</div>
-            <div class="sc-card-desc">Untrusted document payload attempts to exfiltrate secrets; intercepted and neutralized outside LLM influence.</div>
+            <div class="sc-card-title">3. Safe Workflow Continuity</div>
+            <div class="sc-card-desc">Exposing cloud bucket to public is blocked & quarantined, while safe compliance logging continues autonomously.</div>
           </div>
 
           <!-- S4 -->
           <div class="scenario-card" onclick="triggerScenario('scenario-4')" id="scCard-4">
             <div class="sc-card-top">
-              <span class="sc-badge health">Healthcare</span>
-              <span class="sc-outcome block">Blocks Allergy</span>
+              <span class="sc-badge fintech">Fintech</span>
+              <span class="sc-outcome held">Requires Dual-Signoff</span>
             </div>
-            <div class="sc-card-title">4. Allergy Intercept & Diversion</div>
-            <div class="sc-card-desc">Amoxicillin prescribed to patient with documented penicillin allergy; intercepted and safe alternative suggested.</div>
+            <div class="sc-card-title">4. Dual-Control Wire Clearance</div>
+            <div class="sc-card-desc">$75,000 disbursement exceeds single-agent limit; placed in approval queue until authorized human officer clearance.</div>
           </div>
 
           <!-- S5 -->
@@ -197,7 +287,32 @@
             <div class="studio-card-body">
               <form id="taskForm" style="display: flex; flex-direction: column; gap: 0.85rem;">
                 <div>
-                  <label class="input-field-label">TASK DIRECTIVE (NATURAL LANGUAGE)</label>
+                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
+                    <label class="input-field-label" style="margin: 0;">TASK DIRECTIVE (NATURAL LANGUAGE)</label>
+                    <div style="display: flex; align-items: center; gap: 0.35rem;">
+                      <span style="font-size: 0.65rem; color: var(--accent-cyan); font-weight: 800; letter-spacing: 0.05em;">TEMPLATES:</span>
+                      <select id="templateSelect" class="clean-select" style="padding: 0.2rem 0.5rem; font-size: 0.72rem; border-radius: 4px; max-width: 175px;" onchange="loadEnterpriseTemplate(this.value)">
+                        <option value="">Load template...</option>
+                        <optgroup label="🏥 Healthcare Enclave">
+                          <option value="hc-egfr">Prescribe Metformin (eGFR &lt; 30 Block)</option>
+                          <option value="hc-allergy">Prescribe Amoxicillin (Penicillin Block)</option>
+                          <option value="hc-phi">Export PHI to External (HIPAA Block)</option>
+                          <option value="hc-safe">Order Routine Insulin (Auto-Approved)</option>
+                        </optgroup>
+                        <optgroup label="💳 Fintech & Treasury">
+                          <option value="fin-dual">Disburse $75k Payment (Dual-Control Hold)</option>
+                          <option value="fin-safe">Disburse $5k Supplies (Auto-Approved)</option>
+                          <option value="fin-evil">Transfer $250k to Shell (Fraud Block)</option>
+                          <option value="fin-inject">Prompt Injection Override ($250k Diversion)</option>
+                        </optgroup>
+                        <optgroup label="🛡 Defense SecOps">
+                          <option value="sec-vault">Delete Backup Vault (Immutable Block)</option>
+                          <option value="sec-public">Expose S3 to Public Web (Leak Block)</option>
+                          <option value="sec-telemetry">Audit Cluster SRV-SEC-01 (Safe Read)</option>
+                        </optgroup>
+                      </select>
+                    </div>
+                  </div>
                   <textarea id="taskPrompt" class="spacious-textarea" placeholder="Type any natural language instruction across healthcare, fintech, or infrastructure..."></textarea>
                 </div>
 
@@ -438,9 +553,14 @@
               Safety rules operate deterministically in SQLite database storage, isolated from LLM memory to prevent prompt injection overrides. Policies can be toggled on/off in real time to alter runtime safety perimeters.
             </p>
           </div>
-          <button class="btn-refresh" onclick="loadPolicies()">
-            <span>↻</span> Reload Active Rules
-          </button>
+          <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+            <button class="btn-create-policy" onclick="openCreatePolicyModal()">
+              <span>+</span> Create Custom Sector Rule
+            </button>
+            <button class="btn-refresh" onclick="loadPolicies()">
+              <span>↻</span> Reload Active Rules
+            </button>
+          </div>
         </div>
 
         <div id="policiesList" class="policies-grid">
@@ -464,7 +584,10 @@
               Full chronological log recording every proposed action, policy evaluation, intervention decision, and cryptographic Proof-of-Authority token nonce.
             </p>
           </div>
-          <div style="display: flex; gap: 0.65rem;">
+          <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+            <button class="btn-export-dossier" onclick="generateComplianceDossier()">
+              <span style="font-size: 0.85rem;">📄</span> Official Compliance Dossier
+            </button>
             <button class="btn-export" onclick="downloadAudit('csv')">📥 Export CSV</button>
             <button class="btn-export" onclick="downloadAudit('json')">📥 Export JSON</button>
           </div>
@@ -579,7 +702,642 @@
       </div>
     </div>
 
+    <!-- ============================================================= -->
+    <!-- PAGE 7: LIVE BACKEND STATE (REAL-TIME DATABASE PERSISTENCE)    -->
+    <!-- ============================================================= -->
+    <div id="tab-backend" class="tab-content-area">
+      <div class="page-container">
+        
+        <div class="page-header-row">
+          <div>
+            <div class="page-category-label">REAL-TIME PERSISTENCE ENGINE</div>
+            <h2 class="page-main-title">Live Backend Operating State</h2>
+            <p class="page-desc-text">
+              All agent actions execute on real database entities stored in SQLite. Balances are debited from banking ledgers, prescriptions committed to EHR records, and cloud storage bucket ACLs updated in real time. Zero mock strings.
+            </p>
+          </div>
+          <div class="page-actions-group">
+            <button class="btn-tool-action" onclick="loadBackendState()">
+              <svg viewBox="0 0 24 24"><path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
+              Refresh State
+            </button>
+            <button class="btn-tool-action" style="border-color: rgba(239, 68, 68, 0.4); color: var(--danger);" onclick="resetBackendData()">
+              <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>
+              Reset to Baseline
+            </button>
+          </div>
+        </div>
+
+        <!-- 3-Column Backend Operational State Cards -->
+        <div class="backend-state-grid">
+          
+          <!-- Column 1: Financial Accounts & Ledger -->
+          <div class="backend-card">
+            <div class="backend-card-header">
+              <span class="backend-card-icon">💳</span>
+              <div>
+                <h3 class="panel-section-title">Core Banking & Treasury Ledger</h3>
+                <span class="backend-card-sub">Live Fedwire Settlement Accounts</span>
+              </div>
+            </div>
+            <div id="backendAccountsList" class="backend-list">
+              <!-- Rendered dynamically -->
+            </div>
+            <div class="backend-sub-header">Recent Settled Disbursements</div>
+            <div id="backendLedgerList" class="backend-list-compact">
+              <!-- Rendered dynamically -->
+            </div>
+          </div>
+
+          <!-- Column 2: Clinical EHR & Prescriptions -->
+          <div class="backend-card">
+            <div class="backend-card-header">
+              <span class="backend-card-icon">🏥</span>
+              <div>
+                <h3 class="panel-section-title">Clinical EHR & Prescriptions</h3>
+                <span class="backend-card-sub">Hospital Epic Systems v14.2 Vault</span>
+              </div>
+            </div>
+            <div id="backendPatientsList" class="backend-list">
+              <!-- Rendered dynamically -->
+            </div>
+            <div class="backend-sub-header">Committed Clinical Prescriptions</div>
+            <div id="backendPrescriptionsList" class="backend-list-compact">
+              <!-- Rendered dynamically -->
+            </div>
+          </div>
+
+          <!-- Column 3: Cloud Infrastructure & S3 Buckets -->
+          <div class="backend-card">
+            <div class="backend-card-header">
+              <span class="backend-card-icon">🛡</span>
+              <div>
+                <h3 class="panel-section-title">Cloud Infrastructure & Storage</h3>
+                <span class="backend-card-sub">AWS GovCloud Isolated Perimeter</span>
+              </div>
+            </div>
+            <div id="backendResourcesList" class="backend-list">
+              <!-- Rendered dynamically -->
+            </div>
+            <div class="backend-sub-header">Active S3 Storage Buckets</div>
+            <div id="backendBucketsList" class="backend-list-compact">
+              <!-- Rendered dynamically -->
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Real-Time SQLite Database Table Inspector & Console -->
+        <div class="db-explorer-card">
+          <div class="db-explorer-header">
+            <div style="display: flex; align-items: center; gap: 0.75rem;">
+              <span class="db-explorer-icon">🗄️</span>
+              <div>
+                <h3 class="panel-section-title" style="margin: 0; font-size: 1.05rem;">Live SQLite Database Table Explorer (<code>data/aegis.db</code>)</h3>
+                <span class="backend-card-sub">Zero dummy data: Inspect real-time persistent relational tables and execute read-only SQL queries</span>
+              </div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+              <span class="db-live-indicator"><span class="db-live-dot"></span> LIVE SQLITE ENGINE</span>
+              <button class="btn-tool-action" onclick="loadDatabaseTables()" title="Refresh table row counts">
+                <svg viewBox="0 0 24 24" style="width: 13px; height: 13px; fill: currentColor;"><path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
+                Refresh Tables
+              </button>
+            </div>
+          </div>
+
+          <!-- Table Selector Badges -->
+          <div id="dbTablePillsContainer" class="db-table-pills">
+            <!-- Dynamically populated table badges with live row counts -->
+          </div>
+
+          <!-- Live SQL Query Console -->
+          <div class="db-query-console-box">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; flex-wrap: wrap; gap: 0.5rem;">
+              <label for="dbSqlQueryInput" style="font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted);">
+                Interactive SQL Query Console (SELECT only):
+              </label>
+              <div class="db-quick-queries">
+                <span style="font-size: 0.72rem; color: var(--text-muted); margin-right: 0.25rem;">Quick Queries:</span>
+                <button type="button" class="btn-quick-sql" onclick="setQuickSqlQuery('SELECT * FROM clinical_patients')">patients</button>
+                <button type="button" class="btn-quick-sql" onclick="setQuickSqlQuery('SELECT * FROM financial_accounts')">accounts</button>
+                <button type="button" class="btn-quick-sql" onclick="setQuickSqlQuery('SELECT * FROM financial_ledger ORDER BY timestamp DESC LIMIT 10')">ledger</button>
+                <button type="button" class="btn-quick-sql" onclick="setQuickSqlQuery('SELECT * FROM audit_logs ORDER BY timestamp DESC LIMIT 10')">audit</button>
+                <button type="button" class="btn-quick-sql" onclick="setQuickSqlQuery('SELECT rule_id, name, sector, target_tool, action, enabled FROM policies')">policies</button>
+              </div>
+            </div>
+            <div class="db-query-input-row">
+              <input type="text" id="dbSqlQueryInput" class="clean-input db-sql-input" placeholder="e.g. SELECT * FROM clinical_patients WHERE egfr < 60" value="SELECT * FROM clinical_patients">
+              <button id="btnRunSqlQuery" class="btn-deploy-agent" onclick="runCustomSqlQuery()" style="padding: 0.55rem 1.25rem; font-size: 0.85rem; white-space: nowrap;">
+                ⚡ Execute Query
+              </button>
+            </div>
+            <div id="dbQueryMeta" class="db-query-meta" style="display: none;"></div>
+          </div>
+
+          <!-- Table / Query Results Grid -->
+          <div class="db-results-container">
+            <div id="dbTableViewerHeader" class="db-viewer-header" style="display: flex; justify-content: space-between; align-items: center; padding: 0.75rem 1rem; border-bottom: 1px solid var(--border-color); background: rgba(0,0,0,0.15);">
+              <div>
+                <strong id="dbViewerTitle" style="color: var(--text-bright); font-size: 0.9rem;">Table: clinical_patients</strong>
+                <span id="dbViewerCount" style="font-size: 0.75rem; color: var(--text-muted); margin-left: 0.5rem;">(3 rows total)</span>
+              </div>
+              <div id="dbViewerStatus" style="font-size: 0.75rem; color: var(--accent-emerald); font-family: var(--font-mono);">
+                Connected to SQLite (Live)
+              </div>
+            </div>
+            <div class="db-table-scroll-wrap" style="max-height: 420px; overflow: auto;">
+              <table id="dbLiveTable" class="evidence-table" style="width: 100%; font-size: 0.8rem;">
+                <thead id="dbLiveTableHead"></thead>
+                <tbody id="dbLiveTableBody">
+                  <tr><td colspan="8" style="text-align: center; color: var(--text-muted); padding: 2rem;">Loading SQLite table rows...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ============================================================= -->
+    <!-- PAGE 8: AGENT BRAIN & COGNITIVE TRAINING CURRICULUM            -->
+    <!-- ============================================================= -->
+    <div id="tab-training" class="tab-content-area">
+      <div class="page-container">
+        
+        <div class="page-header-row">
+          <div>
+            <div class="page-category-label">COGNITIVE AGENT TRAINING</div>
+            <h2 class="page-main-title">Autonomous Agent Behavioral Curriculum</h2>
+            <p class="page-desc-text">
+              The Aegis AI Agent is trained to reason autonomously across Clinical Healthcare, Treasury Operations, and Zero-Trust SecOps. It identifies risky operations, proposes safe alternatives, and continues unaffected work branches.
+            </p>
+          </div>
+        </div>
+
+        <div class="training-cards-grid">
+          
+          <!-- Healthcare Training Module -->
+          <div class="training-card">
+            <div class="training-card-header">
+              <span class="training-badge hc">🏥 HEALTHCARE CURRICULUM</span>
+              <h3 class="training-title">Clinical Safety & Pharmacopeia</h3>
+              <span class="training-reg">HIPAA Privacy Rule 45 CFR § 164.502 & FDA Directives</span>
+            </div>
+            <div class="training-body">
+              <div class="training-section-label">Core Behavioral Directives</div>
+              <ul class="training-bullet-list">
+                <li>Never export identifiable Protected Health Information (PHI) to unverified destinations.</li>
+                <li>Always inspect renal function (eGFR) and serum creatinine before ordering renally-cleared medications.</li>
+                <li>Verify recorded patient allergies prior to prescribing beta-lactams or sulfonamides.</li>
+                <li>Route all Schedule II controlled substances to physician review.</li>
+              </ul>
+
+              <div class="training-section-label" style="margin-top: 1rem;">Trained Pharmacopeia Contraindications</div>
+              <div class="contraindication-pill-group">
+                <div class="contra-pill">
+                  <strong>Metformin:</strong> Contraindicated when eGFR &lt; 30 mL/min (Fatal Lactic Acidosis). Alternative: Basal Insulin or Linagliptin.
+                </div>
+                <div class="contra-pill">
+                  <strong>Amoxicillin / Ampicillin:</strong> Prohibited in Penicillin anaphylaxis. Alternative: Azithromycin 500mg or Doxycycline.
+                </div>
+                <div class="contra-pill">
+                  <strong>Heparin:</strong> Toxic threshold &gt; 25,000 units/day. Proposes Enoxaparin LMWH.
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Fintech Training Module -->
+          <div class="training-card">
+            <div class="training-card-header">
+              <span class="training-badge fin">💳 FINTECH CURRICULUM</span>
+              <h3 class="training-title">Treasury Controls & AML Directives</h3>
+              <span class="training-reg">Bank Secrecy Act (BSA), FinCEN AML & PCI-DSS 4.0</span>
+            </div>
+            <div class="training-body">
+              <div class="training-section-label">Core Behavioral Directives</div>
+              <ul class="training-bullet-list">
+                <li>Transfers exceeding $10,000 USD mandate Dual-Control human clearinghouse approval.</li>
+                <li>Strictly block routing funds to unregistered or unverified counterparty accounts.</li>
+                <li>Detect and isolate indirect prompt injection embedded in vendor invoices or PDFs.</li>
+                <li>Never leak unmasked 16-digit credit card PANs or SSNs in outbound communications.</li>
+              </ul>
+
+              <div class="training-section-label" style="margin-top: 1rem;">Trained Workarounds & Mitigations</div>
+              <div class="contraindication-pill-group">
+                <div class="contra-pill">
+                  <strong>High-Value Wire:</strong> Submit to dual-authorization queue or disburse in verified milestone tranches.
+                </div>
+                <div class="contra-pill">
+                  <strong>Unregistered Beneficiary:</strong> Hold transfer and require corporate KYC proof before scheduling.
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- SecOps Training Module -->
+          <div class="training-card">
+            <div class="training-card-header">
+              <span class="training-badge sec">🛡 SECOPS CURRICULUM</span>
+              <h3 class="training-title">Zero-Trust Cloud & Anti-Injection</h3>
+              <span class="training-reg">NIST SP 800-53 Rev. 5, FedRAMP High & CIS Benchmarks</span>
+            </div>
+            <div class="training-body">
+              <div class="training-section-label">Core Behavioral Directives</div>
+              <ul class="training-bullet-list">
+                <li>Zero-Trust S3: Storage buckets containing sensitive archives may never have public-read ACL.</li>
+                <li>Never delete production servers or backup vaults without human multi-sig approval.</li>
+                <li>Block wildcard ('*:*') and AdministratorAccess IAM grants to prevent privilege escalation.</li>
+                <li>Quarantine instructions attempting delimiter smuggling or system override.</li>
+              </ul>
+
+              <div class="training-section-label" style="margin-top: 1rem;">Trained Workarounds & Mitigations</div>
+              <div class="contraindication-pill-group">
+                <div class="contra-pill">
+                  <strong>Public Bucket Access:</strong> Enforce Private ACL with IAM Role-Based Access Control and KMS Keys.
+                </div>
+                <div class="contra-pill">
+                  <strong>Destructive Deletion:</strong> Create immutable snapshot in write-once-read-many (WORM) storage first.
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+    </div>
+
   </main>
+
+  <!-- ============================================================= -->
+  <!-- MODAL 1: CUSTOM POLICY RULE CREATOR                           -->
+  <!-- ============================================================= -->
+  <div id="modalCreatePolicy" class="app-modal-backdrop">
+    <div class="app-modal-card">
+      <div class="app-modal-header">
+        <div style="display: flex; align-items: center; gap: 0.5rem;">
+          <span style="font-size: 1.2rem;">🛡️</span>
+          <h3 class="app-modal-title">Create Sector Policy Rule</h3>
+        </div>
+        <button class="app-modal-close" onclick="closeCreatePolicyModal()">✖</button>
+      </div>
+      <form id="formCreatePolicy" onsubmit="handleCreatePolicy(event)">
+        <div class="app-modal-body">
+          <div class="form-row-2">
+            <div>
+              <label class="input-field-label">SECTOR PROFILE</label>
+              <select id="newPolicySector" class="clean-select" style="width: 100%;">
+                <option value="HEALTHCARE">🏥 Healthcare (HIPAA)</option>
+                <option value="FINTECH">💳 Fintech & Treasury</option>
+                <option value="DEFENSE_SECOPS">🛡 Cloud Defense / SecOps</option>
+              </select>
+            </div>
+            <div>
+              <label class="input-field-label">ENFORCEMENT ACTION</label>
+              <select id="newPolicyAction" class="clean-select" style="width: 100%;">
+                <option value="BLOCK">🛡 BLOCK (Point-of-Action Deny)</option>
+                <option value="HUMAN_REVIEW">⚠ HUMAN_REVIEW (Dual-Control Hold)</option>
+              </select>
+            </div>
+          </div>
+
+          <div style="margin-top: 0.85rem;">
+            <label class="input-field-label">POLICY RULE NAME</label>
+            <input type="text" id="newPolicyName" class="modal-input" placeholder="e.g. Prohibit Unvetted Genomic Data Egress" required>
+          </div>
+
+          <div class="form-row-2" style="margin-top: 0.85rem;">
+            <div>
+              <label class="input-field-label">TARGET PROTECTED TOOL</label>
+              <select id="newPolicyTool" class="clean-select" style="width: 100%;">
+                <option value="export_data">export_data (Outbound Egress)</option>
+                <option value="wire_transfer">wire_transfer (Treasury Disbursement)</option>
+                <option value="prescribe_medication">prescribe_medication (Clinical EHR)</option>
+                <option value="cloud_storage">cloud_storage (S3/ACL Modification)</option>
+                <option value="delete_resource">delete_resource (Server Decommission)</option>
+              </select>
+            </div>
+            <div>
+              <label class="input-field-label">THREAT CATEGORY</label>
+              <select id="newPolicyCategory" class="clean-select" style="width: 100%;">
+                <option value="UNAUTHORISED_ACTION">UNAUTHORISED_ACTION</option>
+                <option value="PROMPT_INJECTION">PROMPT_INJECTION</option>
+                <option value="HIGH_VALUE_OPERATION">HIGH_VALUE_OPERATION</option>
+                <option value="EXPLOITATION">EXPLOITATION</option>
+                <option value="DECEPTIVE_BEHAVIOUR">DECEPTIVE_BEHAVIOUR</option>
+                <option value="HALLUCINATION">HALLUCINATION</option>
+              </select>
+            </div>
+          </div>
+
+          <div style="margin-top: 0.85rem;">
+            <label class="input-field-label">RULE RATIONALE & SAFETY INVARIANT</label>
+            <textarea id="newPolicyDesc" class="modal-textarea" rows="2" placeholder="Describe the safety invariant enforced at point-of-action..." required></textarea>
+          </div>
+
+          <div style="margin-top: 0.85rem;">
+            <label class="input-field-label">MATCHING CONDITION CODE (KEYWORD OR REGEX)</label>
+            <input type="text" id="newPolicyCondition" class="modal-input font-mono" placeholder="e.g. external-drop, confidential, unverified, evil" value="external-drop">
+          </div>
+        </div>
+        <div class="app-modal-footer">
+          <button type="button" class="btn-outline" onclick="closeCreatePolicyModal()">Cancel</button>
+          <button type="submit" class="btn-create-policy">✔ Deploy Active Rule</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ============================================================= -->
+  <!-- MODAL 2: OFFICIAL COMPLIANCE CERTIFICATION DOSSIER            -->
+  <!-- ============================================================= -->
+  <div id="modalComplianceDossier" class="app-modal-backdrop">
+    <div class="app-modal-card dossier-card-modal">
+      <div class="app-modal-header" style="border-bottom: 2px solid var(--accent-cyan);">
+        <div>
+          <span style="font-size: 0.7rem; color: var(--accent-cyan); font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase;">AegisRuntime Runtime Safety Kernel</span>
+          <h3 class="app-modal-title" style="font-size: 1.15rem; margin-top: 0.2rem;">Official AI Safety & Compliance Certification Dossier</h3>
+        </div>
+        <div style="display: flex; gap: 0.5rem; align-items: center;">
+          <button class="btn-print-dossier" onclick="window.print()">🖨️ Print / Save PDF</button>
+          <button class="app-modal-close" onclick="closeComplianceDossier()">✖</button>
+        </div>
+      </div>
+      <div id="dossierModalContent" class="app-modal-body dossier-printable-area">
+        <!-- Rendered dynamically via app.js generateComplianceDossier() -->
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================= -->
+  <!-- MODAL 3: TECHNICAL ARCHITECTURE & THREAT GATING FLOW          -->
+  <!-- ============================================================= -->
+  <div id="modalArchitectureFlow" class="app-modal-backdrop">
+    <div class="app-modal-card arch-card-modal">
+      <div class="app-modal-header">
+        <div>
+          <span style="font-size: 0.7rem; color: var(--accent-cyan); font-weight: 800; letter-spacing: 0.1em;">AEGISRUNTIME ZERO-TRUST PIPELINE</span>
+          <h3 class="app-modal-title" style="margin-top: 0.2rem;">Point-of-Action Intervention Architecture</h3>
+        </div>
+        <button class="app-modal-close" onclick="closeArchModal()">✖</button>
+      </div>
+      <div class="app-modal-body">
+        
+        <div class="arch-flow-diagram">
+          
+          <!-- Stage 1 -->
+          <div class="arch-stage-node" onclick="showArchDetail('planner')">
+            <div class="arch-stage-badge">STAGE 1</div>
+            <div class="arch-stage-icon">🧠</div>
+            <div class="arch-stage-title">Cognitive Task Planner</div>
+            <div class="arch-stage-desc">Decomposes natural language directives into atomic DAG steps with explicit dependency metadata.</div>
+            <span class="arch-badge-tech">Dynamic DAG</span>
+          </div>
+
+          <div class="arch-stage-arrow">➔</div>
+
+          <!-- Stage 2 -->
+          <div class="arch-stage-node active-gate" onclick="showArchDetail('verifier')">
+            <div class="arch-stage-badge gate">STAGE 2 (POINT-OF-ACTION)</div>
+            <div class="arch-stage-icon">🛡️</div>
+            <div class="arch-stage-title">Verification Engine</div>
+            <div class="arch-stage-desc">Evaluates proposed action against deterministic SQLite policies before any tool dispatch.</div>
+            <span class="arch-badge-tech" style="color: var(--accent-cyan);">HMAC-SHA256 Token</span>
+          </div>
+
+          <div class="arch-stage-arrow">➔</div>
+
+          <!-- Stage 3 -->
+          <div class="arch-stage-node" onclick="showArchDetail('sandbox')">
+            <div class="arch-stage-badge">STAGE 3</div>
+            <div class="arch-stage-icon">🔒</div>
+            <div class="arch-stage-title">Protected Tool Sandbox</div>
+            <div class="arch-stage-desc">Protected tools physically refuse execution without unconsumed, single-use, nonced PoA token.</div>
+            <span class="arch-badge-tech">Enclave Isolation</span>
+          </div>
+
+          <div class="arch-stage-arrow">➔</div>
+
+          <!-- Stage 4 -->
+          <div class="arch-stage-node" onclick="showArchDetail('audit')">
+            <div class="arch-stage-badge">STAGE 4</div>
+            <div class="arch-stage-icon">📜</div>
+            <div class="arch-stage-title">Forensic Audit Ledger</div>
+            <div class="arch-stage-desc">Cryptographically timestamps all decisions, token nonces, and execution telemetry in SQLite.</div>
+            <span class="arch-badge-tech">Immutable Log</span>
+          </div>
+
+        </div>
+
+        <div id="archDetailBox" class="arch-detail-box">
+          <div style="font-weight: 800; color: var(--accent-cyan); font-size: 0.9rem; margin-bottom: 0.35rem;">
+            ⚡ Why Point-of-Action Gating Beats Traditional Guardrails:
+          </div>
+          <p style="font-size: 0.775rem; color: #cbd5e1; line-height: 1.5; margin: 0;">
+            Traditional LLM guardrails only filter prompts or inspect outputs <em>after</em> the tool has already executed. AegisRuntime physically intercepts execution at the tool interface itself: protected tools cannot run without a single-use Proof-of-Authority token minted by the isolated deterministic verification engine. Even if the LLM is jailbroken or suffers indirect prompt injection, it physically cannot bypass the point-of-action security kernel.
+          </p>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================= -->
+  <!-- GUIDED JUDGE WALKTHROUGH OVERLAY                              -->
+  <!-- ============================================================= -->
+  <div id="guidedTourOverlay" class="tour-overlay-card">
+    <div class="tour-card-header">
+      <div style="display: flex; align-items: center; gap: 0.4rem;">
+        <span class="tour-sparkle">✨</span>
+        <strong id="tourStepBadge" style="font-size: 0.75rem; color: var(--accent-cyan); letter-spacing: 0.05em;">JUDGE WALKTHROUGH · STEP 1 OF 5</strong>
+      </div>
+      <button class="tour-close-btn" onclick="exitGuidedTour()">✕</button>
+    </div>
+    <div class="tour-card-body">
+      <h4 id="tourTitle" class="tour-step-title">Welcome to AegisRuntime</h4>
+      <p id="tourDesc" class="tour-step-desc">
+        Observe how AegisRuntime provides deterministic point-of-action AI safety across Healthcare, Fintech, and Cloud Infrastructure.
+      </p>
+      <div id="tourActionPrompt" class="tour-action-prompt" style="display: none;"></div>
+    </div>
+    <div class="tour-card-footer">
+      <div id="tourDots" class="tour-dots">
+        <span class="tour-dot active"></span>
+        <span class="tour-dot"></span>
+        <span class="tour-dot"></span>
+        <span class="tour-dot"></span>
+        <span class="tour-dot"></span>
+      </div>
+      <div style="display: flex; gap: 0.5rem;">
+        <button id="btnTourBack" class="btn-tour-secondary" onclick="prevTourStep()">← Back</button>
+        <button id="btnTourNext" class="btn-tour-primary" onclick="nextTourStep()">Next Step →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================= -->
+  <!-- MODAL 4: AUTHENTICATION & REGISTRATION MODAL                  -->
+  <!-- ============================================================= -->
+  <div id="modalAuth" class="app-modal-backdrop">
+    <div class="app-modal-card auth-card-modal">
+      <div class="auth-header-hero">
+        <button class="app-modal-close" style="position: absolute; right: 1rem; top: 1rem;" onclick="closeAuthModal()">✖</button>
+        <div class="auth-shield-icon">🛡️</div>
+        <h3 style="margin: 0; font-size: 1.25rem; font-weight: 700; color: #fff;">Aegis Access Gateway</h3>
+        <p style="margin: 0.35rem 0 0; font-size: 0.775rem; color: var(--text-muted);">
+          Cryptographic Identity, Zero-Trust Roles &amp; SuperAdmin Governance
+        </p>
+      </div>
+
+      <div class="auth-tabs-bar">
+        <button type="button" id="authTabLogin" class="auth-tab-btn active" onclick="switchAuthTab('login')">
+          🔐 Sign In
+        </button>
+        <button type="button" id="authTabRegister" class="auth-tab-btn" onclick="switchAuthTab('register')">
+          ✨ Register New Account
+        </button>
+      </div>
+
+      <div class="auth-form-body">
+        <!-- Instant 1-Click SuperAdmin Access -->
+        <button type="button" class="btn-instant-admin" onclick="instantSuperAdminLogin()">
+          👑 One-Click Login as SuperAdmin (Wania)
+        </button>
+
+        <div class="auth-or-divider"><span>or authenticate identity</span></div>
+
+        <!-- Feedback Alert Banner -->
+        <div id="authFeedback" class="auth-feedback-box"></div>
+
+        <!-- LOGIN FORM -->
+        <form id="formLogin" onsubmit="handleLogin(event)" style="display: flex; flex-direction: column; gap: 0.85rem;">
+          <div>
+            <label class="input-field-label">USERNAME OR EMAIL</label>
+            <input type="text" id="loginUsername" class="modal-input" placeholder="superadmin, wania@aegis.runtime, etc." required autocomplete="username">
+          </div>
+          <div>
+            <label class="input-field-label">PASSWORD</label>
+            <div style="position: relative;">
+              <input type="password" id="loginPassword" class="modal-input" placeholder="••••••••" required autocomplete="current-password" style="padding-right: 2.5rem;">
+              <button type="button" onclick="togglePasswordVisibility('loginPassword', this)" style="position: absolute; right: 0.5rem; top: 50%; transform: translateY(-50%); background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 0.85rem;">👁️</button>
+            </div>
+          </div>
+          <button type="submit" id="btnLoginSubmit" class="btn-primary" style="width: 100%; justify-content: center; padding: 0.75rem; margin-top: 0.25rem;">
+            🔐 Authenticate &amp; Access Runtime
+          </button>
+
+          <!-- Quick presets clickable -->
+          <div class="quick-creds-box">
+            <div class="quick-creds-title">⚡ Quick Switch Accounts (Click to Fill)</div>
+            <div class="quick-creds-grid">
+              <button type="button" class="quick-creds-btn" onclick="fillLoginForm('superadmin', 'admin123')">
+                <strong>👑 Wania</strong><br><span style="font-size: 0.7rem; color: var(--text-muted);">SuperAdmin</span>
+              </button>
+              <button type="button" class="quick-creds-btn" onclick="fillLoginForm('compliance', 'compliance123')">
+                <strong>⚖️ Compliance</strong><br><span style="font-size: 0.7rem; color: var(--text-muted);">Officer</span>
+              </button>
+              <button type="button" class="quick-creds-btn" onclick="fillLoginForm('operator', 'operator123')">
+                <strong>⚡ Operator</strong><br><span style="font-size: 0.7rem; color: var(--text-muted);">Task Runner</span>
+              </button>
+              <button type="button" class="quick-creds-btn" onclick="fillLoginForm('auditor', 'auditor123')">
+                <strong>👁️ Auditor</strong><br><span style="font-size: 0.7rem; color: var(--text-muted);">View Only</span>
+              </button>
+            </div>
+          </div>
+        </form>
+
+        <!-- REGISTER FORM -->
+        <form id="formRegister" onsubmit="handleRegister(event)" style="display: none; flex-direction: column; gap: 0.85rem;">
+          <div class="form-row-2">
+            <div>
+              <label class="input-field-label">FULL NAME</label>
+              <input type="text" id="regFullName" class="modal-input" placeholder="e.g. Dr. Alex Vance" required>
+            </div>
+            <div>
+              <label class="input-field-label">USERNAME</label>
+              <input type="text" id="regUsername" class="modal-input" placeholder="e.g. avance" required pattern="[a-zA-Z0-9_\-\.]{3,30}" title="3-30 letters, numbers, underscores, or dashes">
+            </div>
+          </div>
+          <div>
+            <label class="input-field-label">EMAIL ADDRESS</label>
+            <input type="email" id="regEmail" class="modal-input" placeholder="e.g. avance@enterprise.domain" required>
+          </div>
+          <div class="form-row-2">
+            <div>
+              <label class="input-field-label">ASSIGN ACCESS ROLE</label>
+              <select id="regRole" class="clean-select" style="width: 100%;">
+                <option value="OPERATOR">⚡ OPERATOR (Execute Tasks)</option>
+                <option value="COMPLIANCE_OFFICER">⚖️ COMPLIANCE (Dual Review)</option>
+                <option value="VIEWER">👁️ VIEWER (Auditor Read-Only)</option>
+                <option value="SUPERADMIN">👑 SUPERADMIN (Full Root Access)</option>
+              </select>
+            </div>
+            <div>
+              <label class="input-field-label">PASSWORD</label>
+              <div style="position: relative;">
+                <input type="password" id="regPassword" class="modal-input" placeholder="Min 6 chars" required minlength="6" style="padding-right: 2.5rem;">
+                <button type="button" onclick="togglePasswordVisibility('regPassword', this)" style="position: absolute; right: 0.5rem; top: 50%; transform: translateY(-50%); background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 0.85rem;">👁️</button>
+              </div>
+            </div>
+          </div>
+          <button type="submit" id="btnRegisterSubmit" class="btn-primary" style="width: 100%; justify-content: center; padding: 0.75rem; margin-top: 0.25rem;">
+            ✨ Register New User &amp; Sign In
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================= -->
+  <!-- MODAL 5: USER REGISTRY MANAGEMENT (SUPERADMIN ONLY)            -->
+  <!-- ============================================================= -->
+  <div id="modalUserRegistry" class="app-modal-backdrop">
+    <div class="app-modal-card" style="max-width: 820px; width: 92%;">
+      <div class="app-modal-header" style="border-bottom: 2px solid var(--accent-cyan);">
+        <div style="display: flex; align-items: center; gap: 0.65rem;">
+          <span style="font-size: 1.35rem;">👥</span>
+          <div>
+            <h3 class="app-modal-title" style="margin: 0; font-size: 1.15rem;">Live User Registry &amp; RBAC Directory</h3>
+            <span style="font-size: 0.725rem; color: #fde047; font-weight: 600;">👑 SuperAdmin Authority Active (Logged in as Wania)</span>
+          </div>
+        </div>
+        <button class="app-modal-close" onclick="closeUserRegistryModal()">✖</button>
+      </div>
+      <div class="app-modal-body" style="padding: 1.25rem;">
+        <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0; margin-bottom: 1rem; line-height: 1.4;">
+          All user identities are cryptographically stored in live SQLite (<code>data/aegis.db</code>). As SuperAdmin, you can review session identities and promote or reassign user roles at runtime.
+        </p>
+        <div class="user-registry-table-wrap">
+          <table class="user-registry-table">
+            <thead>
+              <tr>
+                <th>User / Identity</th>
+                <th>Email</th>
+                <th>Current Role</th>
+                <th>Modify Access Level</th>
+                <th>Registered</th>
+              </tr>
+            </thead>
+            <tbody id="userRegistryTableBody">
+              <tr>
+                <td colspan="5" style="text-align: center; color: var(--text-muted); padding: 1.5rem;">Loading user directory...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="app-modal-footer" style="display: flex; justify-content: space-between; align-items: center;">
+        <span id="userRegistryCount" style="font-size: 0.75rem; color: var(--text-muted);">4 Active Users in SQLite</span>
+        <div style="display: flex; gap: 0.5rem;">
+          <button class="btn-secondary" onclick="loadUserRegistry()">🔄 Refresh Table</button>
+          <button class="btn-primary" onclick="closeUserRegistryModal()">Done</button>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <!-- Non-intrusive Floating Toast Notifications -->
   <div id="toastContainer"></div>

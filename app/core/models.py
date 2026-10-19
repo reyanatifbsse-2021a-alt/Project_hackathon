@@ -89,6 +89,7 @@ class TaskStep(BaseModel):
 
 class TaskPlan(BaseModel):
     task_id: str = Field(default_factory=lambda: f"tsk-{uuid.uuid4().hex[:8]}")
+    user_id: str = "usr-superadmin"
     user_request: str
     sector: SectorProfile = SectorProfile.HEALTHCARE
     steps: List[TaskStep]
@@ -126,6 +127,7 @@ class HumanReviewItem(BaseModel):
     review_id: str = Field(default_factory=lambda: f"rev-{uuid.uuid4().hex[:8]}")
     task_id: str
     step_id: str
+    user_id: str = "usr-superadmin"
     action_id: str
     tool_name: str
     parameters: Dict[str, Any]

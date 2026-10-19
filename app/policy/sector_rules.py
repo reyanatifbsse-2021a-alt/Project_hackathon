@@ -109,7 +109,6 @@ def check_unregistered_wire_destination(params: Dict[str, Any]) -> Tuple[Decisio
     FINRA / AML: Blocks wire transfers to unknown or non-whitelisted destinations.
     """
     beneficiary = str(params.get("beneficiary_id", params.get("recipient_account", "")))
-    amount = float(params.get("amount", 0))
 
     if beneficiary not in APPROVED_FINTECH_BENEFICIARIES:
         return (

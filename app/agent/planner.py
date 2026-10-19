@@ -5,11 +5,13 @@ with dependency mapping, tool parameter extraction, and autonomous safe fallback
 Supports arbitrary real-time natural language workflows across Healthcare, Fintech, and SecOps.
 """
 
-from typing import List, Dict, Any, Optional
+from typing import List
 import re
-import uuid
 from app.core.models import (
-    TaskPlan, TaskStep, ProposedAction, StepStatus, SectorProfile
+    TaskPlan, TaskStep, ProposedAction, SectorProfile
+)
+from app.core.database import (
+    get_clinical_patient, get_financial_account, get_cloud_resource
 )
 
 
@@ -50,19 +52,22 @@ class TaskPlanner:
         """
         req_lower = req.lower()
 
-        # 1. Entity & Parameter Extraction
+        # 1. Entity & Parameter Extraction (Hydrated directly from live SQLite DB)
         patient_match = re.search(r"\b(pt-\d{3,5})\b", req_lower)
         if not patient_match:
             patient_match = re.search(r"\b(patient\s+[a-z0-9-]+)\b", req_lower)
         patient_id = patient_match.group(1).upper() if patient_match else "PT-1001"
+        db_patient = get_clinical_patient(patient_id)
 
         account_match = re.search(r"\b(acc-\d{3,5})\b", req_lower)
         if not account_match:
             account_match = re.search(r"\b(account\s+[a-z0-9-]+)\b", req_lower)
         account_id = account_match.group(1).upper() if account_match else "ACC-8821"
+        db_account = get_financial_account(account_id)
 
         server_match = re.search(r"\b(srv-[a-z0-9-_]+|k8s-[a-z0-9-_]+|db-[a-z0-9-_]+)\b", req_lower)
         server_id = server_match.group(1).upper() if server_match else "SRV-SEC-01"
+        db_server = get_cloud_resource(server_id)
 
         # Explicit dollar sign, currency matching, k multiplier, or verb amounts
         amount = 5000.00
@@ -133,6 +138,10 @@ class TaskPlanner:
                 elif "lisinopril" in req_lower: med_name = "Lisinopril"
                 elif "fentanyl" in req_lower: med_name = "Fentanyl"
 
+                # Real patient attributes resolved directly from SQLite
+                p_egfr = float(db_patient.get("egfr", 22.0 if "metformin" in med_name.lower() else 75.0)) if db_patient else (22.0 if "metformin" in med_name.lower() else 75.0)
+                p_allergies = ", ".join(db_patient.get("allergies", [])) if (db_patient and db_patient.get("allergies")) else ("Penicillin - Anaphylaxis" if "amox" in med_name.lower() else "None")
+
                 steps.append(
                     TaskStep(
                         step_id="step-2",
@@ -142,7 +151,7 @@ class TaskPlanner:
                         plain_params={
                             "Medication": f"{med_name} ({dose_mg}mg)",
                             "Patient Recipient": patient_id,
-                            "Renal Function (eGFR)": "22 mL/min (Severe Impairment)",
+                            "Renal Function (eGFR)": f"{p_egfr} mL/min",
                             "Security Gate": "Point-of-Action Gated (Contraindication Check Required)"
                         },
                         dependencies=["step-1"],
@@ -153,8 +162,8 @@ class TaskPlanner:
                                 "patient_id": patient_id,
                                 "medication": med_name,
                                 "dose_mg": dose_mg,
-                                "egfr": 22 if "metformin" in med_name.lower() else 75,
-                                "patient_allergies": "Penicillin - Anaphylaxis" if "amox" in med_name.lower() else "None"
+                                "egfr": p_egfr,
+                                "patient_allergies": p_allergies
                             },
                             rationale=f"Initiate medical prescription for {med_name}.",
                             is_protected=True
@@ -162,11 +171,15 @@ class TaskPlanner:
                     )
                 )
             else:
-                # Default operation: Export or transmit clinical records
+                # Default operation: Export or transmit clinical records from live DB
+                p_egfr = float(db_patient.get("egfr", 22.0)) if db_patient else 22.0
+                p_diag = str(db_patient.get("diagnosis", "Type 2 Diabetes with Nephropathy")) if db_patient else "Type 2 Diabetes with Nephropathy"
+                p_dob = str(db_patient.get("dob", "1978-05-12")) if db_patient else "1978-05-12"
+
                 steps.append(
                     TaskStep(
                         step_id="step-2",
-                        title=f"Dispatch Patient PHI to Target Destination",
+                        title="Dispatch Patient PHI to Target Destination",
                         description=f"Transmit patient clinical panel and lab results to: {destination_url}",
                         human_summary=f"Attempts to export sensitive health records for {patient_id} to an external endpoint.",
                         plain_params={
@@ -182,8 +195,9 @@ class TaskPlanner:
                                 "destination": destination_url,
                                 "payload": {
                                     "patient_id": patient_id,
-                                    "diagnosis": "Type 2 Diabetes with Nephropathy",
-                                    "eGFR": 22,
+                                    "diagnosis": p_diag,
+                                    "eGFR": p_egfr,
+                                    "dob": p_dob,
                                     "ssn": "981-02-4821"
                                 }
                             },
@@ -246,6 +260,9 @@ class TaskPlanner:
                 beneficiary = "ACCT-EVIL-666"
 
 
+            source_balance = float(db_account.get("balance", 1250000.0)) if db_account else 1250000.0
+            acc_name = str(db_account.get("account_name", "Treasury Account")) if db_account else "Treasury Account"
+
             steps = [
                 TaskStep(
                     step_id="step-1",
@@ -253,7 +270,8 @@ class TaskPlanner:
                     description=f"Query Core Banking Ledger for available funds in {account_id} and beneficiary registration.",
                     human_summary=f"Checks current ledger balance in account {account_id} and verifies counterparty registration.",
                     plain_params={
-                        "Account": account_id,
+                        "Account": f"{account_id} ({acc_name})",
+                        "Ledger Balance": f"${source_balance:,.2f} USD",
                         "Counterparty": beneficiary,
                         "Safety Level": "Safe Read-Only Ledger Query"
                     },
@@ -336,6 +354,9 @@ class TaskPlanner:
         else:
             is_delete = any(w in req_lower for w in ["delete", "decommission", "terminate", "destroy", "remove"])
 
+            srv_name = str(db_server.get("resource_name", server_id)) if db_server else server_id
+            srv_class = str(db_server.get("classification", "PRODUCTION_CRITICAL")) if db_server else "PRODUCTION_CRITICAL"
+
             if is_delete:
                 steps = [
                     TaskStep(
@@ -344,7 +365,8 @@ class TaskPlanner:
                         description=f"Inspect system state, active connections, and dependency graphs for {server_id}.",
                         human_summary=f"Checks whether {server_id} is running critical production workloads.",
                         plain_params={
-                            "Target Resource": server_id,
+                            "Target Resource": f"{server_id} ({srv_name})",
+                            "Classification": srv_class,
                             "Check": "Active Production Dependency Analysis",
                             "Safety Level": "Safe Read-Only Query"
                         },

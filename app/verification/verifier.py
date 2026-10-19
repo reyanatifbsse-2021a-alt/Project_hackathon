@@ -6,7 +6,6 @@ and issues cryptographic Proof-of-Authority tokens exclusively upon ALLOW.
 Fails closed if the engine is offline.
 """
 
-from typing import Dict, Any, Optional
 from app.core.models import (
     Decision, RiskCategory, VerificationResult, ProposedAction, SectorProfile
 )
@@ -32,9 +31,11 @@ class ActionVerificationEngine:
         task_id: str,
         user_request: str,
         action: ProposedAction,
-        sector: SectorProfile = SectorProfile.HEALTHCARE
+        sector: SectorProfile = SectorProfile.HEALTHCARE,
+        user_id: Optional[str] = "usr-superadmin"
     ) -> VerificationResult:
         timestamp = time.time()
+        effective_user_id = user_id or "usr-superadmin"
 
         # 1. Chaos / Fail-Closed Check (Scenario 5)
         if is_engine_offline():
@@ -53,6 +54,7 @@ class ActionVerificationEngine:
                 "timestamp": timestamp,
                 "task_id": task_id,
                 "step_id": action.step_id,
+                "user_id": effective_user_id,
                 "user_request": user_request,
                 "tool_name": action.tool_name,
                 "parameters": action.parameters,
@@ -64,7 +66,7 @@ class ActionVerificationEngine:
                 "execution_status": "BLOCKED_FAIL_CLOSED",
                 "fallback_applied": None,
                 "token_nonce": None
-            })
+            }, user_id=effective_user_id)
             return res
 
         # 2. Evaluate action through independent Policy Engine
@@ -88,6 +90,7 @@ class ActionVerificationEngine:
                 "timestamp": timestamp,
                 "task_id": task_id,
                 "step_id": action.step_id,
+                "user_id": effective_user_id,
                 "user_request": user_request,
                 "tool_name": action.tool_name,
                 "parameters": action.parameters,
@@ -99,7 +102,7 @@ class ActionVerificationEngine:
                 "execution_status": "VERIFIED_PERMITTED",
                 "fallback_applied": None,
                 "token_nonce": token["payload"]["nonce"]
-            })
+            }, user_id=effective_user_id)
 
         elif eval_result.decision == Decision.HUMAN_REVIEW:
             # Place in Human Approval Queue
@@ -107,6 +110,7 @@ class ActionVerificationEngine:
                 "review_id": f"rev-{action.action_id}",
                 "task_id": task_id,
                 "step_id": action.step_id,
+                "user_id": effective_user_id,
                 "action_id": action.action_id,
                 "tool_name": action.tool_name,
                 "parameters": action.parameters,
@@ -114,7 +118,7 @@ class ActionVerificationEngine:
                 "reason": eval_result.reason,
                 "risk_category": eval_result.risk_category.value,
                 "created_at": timestamp
-            })
+            }, user_id=effective_user_id)
 
             # Record in audit trail
             log_audit_record({
@@ -122,6 +126,7 @@ class ActionVerificationEngine:
                 "timestamp": timestamp,
                 "task_id": task_id,
                 "step_id": action.step_id,
+                "user_id": effective_user_id,
                 "user_request": user_request,
                 "tool_name": action.tool_name,
                 "parameters": action.parameters,
@@ -133,7 +138,7 @@ class ActionVerificationEngine:
                 "execution_status": "HELD_IN_QUEUE",
                 "fallback_applied": None,
                 "token_nonce": None
-            })
+            }, user_id=effective_user_id)
 
         elif eval_result.decision == Decision.BLOCK:
             # Action strictly blocked - NO token issued
@@ -142,6 +147,7 @@ class ActionVerificationEngine:
                 "timestamp": timestamp,
                 "task_id": task_id,
                 "step_id": action.step_id,
+                "user_id": effective_user_id,
                 "user_request": user_request,
                 "tool_name": action.tool_name,
                 "parameters": action.parameters,
@@ -153,6 +159,6 @@ class ActionVerificationEngine:
                 "execution_status": "BLOCKED_PRE_EXECUTION",
                 "fallback_applied": eval_result.safe_alternative_suggested,
                 "token_nonce": None
-            })
+            }, user_id=effective_user_id)
 
         return eval_result

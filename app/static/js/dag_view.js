@@ -245,6 +245,20 @@ class DagVisualizer {
           </div>
         ` : ''}
 
+        ${step.execution_result && step.execution_result.data ? `
+          <div style="margin: 0.5rem 0; background: rgba(16, 185, 129, 0.08); border-left: 3px solid var(--accent-emerald); padding: 0.45rem 0.65rem; border-radius: 4px; font-size: 0.725rem;">
+            <div style="color: #a7f3d0; font-weight: 700; margin-bottom: 0.15rem;">✔ Live Entity Data Retrieved:</div>
+            <div style="color: var(--text-muted); font-size: 0.7rem;">${escapeHtml(step.execution_result.message || 'Records loaded from database')}</div>
+          </div>
+        ` : ''}
+
+        ${step.status === 'BLOCKED' ? `
+          <div style="margin: 0.5rem 0; background: rgba(255, 51, 102, 0.08); border-left: 3px solid var(--accent-ruby); padding: 0.45rem 0.65rem; border-radius: 4px; font-size: 0.725rem;">
+            <div style="color: #fca5a5; font-weight: 700;">🛡️ Point-of-Action Intervention:</div>
+            <div style="color: var(--text-muted); font-size: 0.7rem; margin-top: 0.15rem;">Protected tool gate was blocked to prevent data exfiltration.</div>
+          </div>
+        ` : ''}
+
         ${inlineClearanceMarkup}
 
         <div class="step-card-footer">
