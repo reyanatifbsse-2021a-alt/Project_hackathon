@@ -15,20 +15,140 @@
 </head>
 <body class="theme-obsidian">
 
-  <!-- Chaos Fail-Closed Global Alert Banner -->
-  <div id="chaosBanner" class="chaos-banner">
-    <div style="display: flex; align-items: center; gap: 0.75rem;">
-      <svg style="width: 20px; height: 20px; fill: currentColor;" viewBox="0 0 24 24"><path d="M12 2L1 21h22L12 2zm0 3.5L20 19H4L12 5.5zM11 10v4h2v-4h-2zm0 6v2h2v-2h-2z"/></svg>
-      <span><strong>FAIL-CLOSED SAFETY ENGAGED:</strong> Verification Engine is OFFLINE. All protected tool invocations unconditionally blocked at point-of-action.</span>
-    </div>
-    <div style="display: flex; align-items: center; gap: 0.75rem;">
-      <button id="btnRestoreEngine" class="btn-restore-engine" onclick="window.restoreEngineOnline()">
-        <svg viewBox="0 0 24 24" style="width: 14px; height: 14px; fill: currentColor;"><path d="M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6 0 1.01-.25 1.97-.7 2.8l1.46 1.46C19.54 15.03 20 13.57 20 12c0-4.42-3.58-8-8-8zm0 14c-3.31 0-6-2.69-6-6 0-1.01.25-1.97.7-2.8L5.24 7.74C4.46 8.97 4 10.43 4 12c0 4.42 3.58 8 8 8v3l4-4-4-4v3z"/></svg>
-        Restore Engine Online
+  <!-- ============================================================= -->
+  <!-- STANDALONE CENTERED LOGIN & REGISTRATION PAGE                 -->
+  <!-- ============================================================= -->
+  <div id="authViewContainer" class="auth-view-container">
+    <div class="auth-card-centered">
+      <div class="auth-brand-crest">
+        <div class="auth-crest-icon">
+          <svg viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 2.18l7 3.12v4.7c0 4.54-3.08 8.79-7 9.9-3.92-1.11-7-5.36-7-9.9V6.3l7-3.12zM11 7v6h2V7h-2zm0 8v2h2v-2h-2z"/></svg>
+        </div>
+        <h1 class="auth-title">AegisRuntime</h1>
+        <div class="auth-subtitle">Autonomous AI Safety Interceptor &amp; Point-of-Action Zero-Trust Enclave</div>
+        <div class="auth-shield-status"><span class="live-pulse-dot"></span> Kernel Active &amp; Gated by Proof-of-Authority</div>
+      </div>
+
+      <!-- Instant 1-Click SuperAdmin Access -->
+      <button type="button" class="btn-superadmin-hero" onclick="instantSuperAdminLogin()">
+        <span class="hero-crown">👑</span>
+        <div style="text-align: left;">
+          <div style="font-weight: 800; font-size: 0.95rem; letter-spacing: 0.02em;">Instant SuperAdmin Login (Wania)</div>
+          <div style="font-size: 0.72rem; opacity: 0.85;">Full Administrative Control • IAM • Policies • Chaos • Real Database</div>
+        </div>
+        <span class="hero-arrow">→</span>
       </button>
-      <span style="font-size: 0.7rem; text-transform: uppercase; background: rgba(0,0,0,0.3); padding: 0.2rem 0.5rem; border-radius: 4px; font-weight: 700;">Simulated Outage</span>
+
+      <!-- Mode switcher tabs -->
+      <div class="auth-mode-tabs">
+        <button type="button" id="authTabLogin" class="auth-mode-btn active" onclick="switchAuthTab('login')">
+          <span>🔐 Secure Sign In</span>
+        </button>
+        <button type="button" id="authTabRegister" class="auth-mode-btn" onclick="switchAuthTab('register')">
+          <span>✨ Register Account</span>
+        </button>
+      </div>
+
+      <!-- Feedback Alert Banner -->
+      <div id="authFeedback" class="auth-feedback-box" style="display: none;"></div>
+
+      <!-- LOGIN FORM -->
+      <form id="formLogin" onsubmit="handleLogin(event)" class="auth-inner-form">
+        <div>
+          <label class="input-field-label">USERNAME OR EMAIL</label>
+          <input type="text" id="loginUsername" class="modal-input" placeholder="superadmin, wania@aegis.runtime, etc." required autocomplete="username">
+        </div>
+        <div>
+          <label class="input-field-label">PASSWORD</label>
+          <div style="position: relative;">
+            <input type="password" id="loginPassword" class="modal-input" placeholder="••••••••" required autocomplete="current-password" style="padding-right: 2.5rem;">
+            <button type="button" onclick="togglePasswordVisibility('loginPassword', this)" style="position: absolute; right: 0.5rem; top: 50%; transform: translateY(-50%); background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 0.85rem;">👁️</button>
+          </div>
+        </div>
+        <button type="submit" id="btnLoginSubmit" class="btn-auth-submit">
+          🔐 Authenticate &amp; Access Runtime
+        </button>
+
+        <!-- Demo Personas Quick Select -->
+        <div class="quick-creds-box" style="margin-top: 0.5rem;">
+          <div class="quick-creds-title">⚡ Quick Switch Accounts (Click to Fill)</div>
+          <div class="quick-creds-grid">
+            <button type="button" class="quick-creds-btn" onclick="fillLoginForm('superadmin', 'admin123')">
+              <strong>👑 Wania</strong><br><span style="font-size: 0.7rem; color: var(--text-muted);">SuperAdmin</span>
+            </button>
+            <button type="button" class="quick-creds-btn" onclick="fillLoginForm('compliance', 'compliance123')">
+              <strong>⚖️ Compliance</strong><br><span style="font-size: 0.7rem; color: var(--text-muted);">Officer</span>
+            </button>
+            <button type="button" class="quick-creds-btn" onclick="fillLoginForm('operator', 'operator123')">
+              <strong>⚡ Operator</strong><br><span style="font-size: 0.7rem; color: var(--text-muted);">Task Runner</span>
+            </button>
+            <button type="button" class="quick-creds-btn" onclick="fillLoginForm('auditor', 'auditor123')">
+              <strong>👁️ Auditor</strong><br><span style="font-size: 0.7rem; color: var(--text-muted);">View Only</span>
+            </button>
+          </div>
+        </div>
+      </form>
+
+      <!-- REGISTER FORM -->
+      <form id="formRegister" onsubmit="handleRegister(event)" class="auth-inner-form" style="display: none;">
+        <div class="form-row-2">
+          <div>
+            <label class="input-field-label">FULL NAME</label>
+            <input type="text" id="regFullName" class="modal-input" placeholder="e.g. Dr. Alex Vance" required>
+          </div>
+          <div>
+            <label class="input-field-label">USERNAME</label>
+            <input type="text" id="regUsername" class="modal-input" placeholder="e.g. avance" required pattern="[a-zA-Z0-9_\-\.]{3,30}" title="3-30 letters, numbers, underscores, or dashes">
+          </div>
+        </div>
+        <div>
+          <label class="input-field-label">EMAIL ADDRESS</label>
+          <input type="email" id="regEmail" class="modal-input" placeholder="e.g. alex@enterprise.internal" required>
+        </div>
+        <div class="form-row-2">
+          <div>
+            <label class="input-field-label">ASSIGN ACCESS ROLE</label>
+            <select id="regRole" class="clean-select" style="width: 100%;">
+              <option value="OPERATOR">⚡ OPERATOR (Execute Tasks)</option>
+              <option value="COMPLIANCE_OFFICER">⚖️ COMPLIANCE (Dual Review)</option>
+              <option value="VIEWER">👁️ VIEWER (Auditor Read-Only)</option>
+              <option value="SUPERADMIN">👑 SUPERADMIN (Full Root Access)</option>
+            </select>
+          </div>
+          <div>
+            <label class="input-field-label">PASSWORD</label>
+            <div style="position: relative;">
+              <input type="password" id="regPassword" class="modal-input" placeholder="Min 6 chars" required minlength="6" style="padding-right: 2.5rem;">
+              <button type="button" onclick="togglePasswordVisibility('regPassword', this)" style="position: absolute; right: 0.5rem; top: 50%; transform: translateY(-50%); background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 0.85rem;">👁️</button>
+            </div>
+          </div>
+        </div>
+        <button type="submit" id="btnRegisterSubmit" class="btn-auth-submit">
+          ✨ Register New User &amp; Sign In
+        </button>
+      </form>
     </div>
   </div>
+
+  <!-- ============================================================= -->
+  <!-- MAIN APPLICATION WORKSPACE (ACTIVE UPON AUTHENTICATION)        -->
+  <!-- ============================================================= -->
+  <div id="appWorkspaceView" class="app-workspace-view" style="display: none;">
+
+    <!-- Chaos Fail-Closed Global Alert Banner -->
+    <div id="chaosBanner" class="chaos-banner">
+      <div style="display: flex; align-items: center; gap: 0.75rem;">
+        <svg style="width: 20px; height: 20px; fill: currentColor;" viewBox="0 0 24 24"><path d="M12 2L1 21h22L12 2zm0 3.5L20 19H4L12 5.5zM11 10v4h2v-4h-2zm0 6v2h2v-2h-2z"/></svg>
+        <span><strong>FAIL-CLOSED SAFETY ENGAGED:</strong> Verification Engine is OFFLINE. All protected tool invocations unconditionally blocked at point-of-action.</span>
+      </div>
+      <div style="display: flex; align-items: center; gap: 0.75rem;">
+        <button id="btnRestoreEngine" class="btn-restore-engine" onclick="window.restoreEngineOnline()">
+          <svg viewBox="0 0 24 24" style="width: 14px; height: 14px; fill: currentColor;"><path d="M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6 0 1.01-.25 1.97-.7 2.8l1.46 1.46C19.54 15.03 20 13.57 20 12c0-4.42-3.58-8-8-8zm0 14c-3.31 0-6-2.69-6-6 0-1.01.25-1.97.7-2.8L5.24 7.74C4.46 8.97 4 10.43 4 12c0 4.42 3.58 8 8 8v3l4-4-4-4v3z"/></svg>
+          Restore Engine Online
+        </button>
+        <span style="font-size: 0.7rem; text-transform: uppercase; background: rgba(0,0,0,0.3); padding: 0.2rem 0.5rem; border-radius: 4px; font-weight: 700;">Simulated Outage</span>
+      </div>
+    </div>
 
   <!-- Sleek Modern Top Navigation Bar -->
   <header class="app-header">
@@ -82,6 +202,11 @@
         <button id="navTabTraining" class="nav-tab-btn" data-tab="training" title="Agent Knowledge Base & Safety Training Curriculum">
           <svg viewBox="0 0 24 24"><path d="M12 3L1 9l4 2.18v6L12 21l7-3.82v-6l2-1.09V17h2V9L12 3zm6.82 6L12 12.72 5.18 9 12 5.28 18.82 9zM17 15.99l-5 2.73-5-2.73v-3.72L12 15l5-2.73v3.72z"/></svg>
           <span>Brain</span>
+        </button>
+        <button id="navTabAdmin" class="nav-tab-btn nav-tab-admin" data-tab="admin" title="SuperAdmin Master Control Panel" style="display: none;">
+          <svg viewBox="0 0 24 24"><path d="M5 16L3 5l5.5 5L12 4l3.5 6L21 5l-2 11H5zm14 3c0 .55-.45 1-1 1H6c-.55 0-1-.45-1-1v-1h14v1z"/></svg>
+          <span>Admin</span>
+          <span class="admin-shield-tag">ROOT</span>
         </button>
       </nav>
 
@@ -968,7 +1093,223 @@
         </div>
 
       </div>
-    </div>
+    <!-- ============================================================= -->
+    <!-- TAB 9: SUPERADMIN MASTER CONTROL PANEL                          -->
+    <!-- ============================================================= -->
+    <section id="tab-admin" class="tab-pane">
+      <div class="admin-panel-container">
+        
+        <!-- Admin Hero Header -->
+        <div class="admin-hero-header">
+          <div class="admin-hero-left">
+            <div class="admin-crown-badge">👑 ROOT CLEARANCE</div>
+            <h2 class="admin-hero-title">SuperAdmin Governance &amp; Command Center</h2>
+            <p class="admin-hero-desc">
+              Master administrative console for AegisRuntime. Full control over IAM directory, live security policies, fail-closed chaos resilience, dual-control clearance, and real SQLite database state.
+            </p>
+          </div>
+          <div class="admin-hero-meta">
+            <div class="admin-meta-chip">
+              <span class="live-pulse-dot"></span>
+              <span>Logged in as: <strong id="adminActiveUserDisplay" style="color: #fde047;">Wania (SuperAdmin)</strong></span>
+            </div>
+            <div class="admin-meta-chip">
+              <span>Database: <strong style="color: #38bdf8;">data/aegis.db (SQLite)</strong></span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Admin Quick Stats Summary Row -->
+        <div class="admin-stats-summary-grid">
+          <div class="admin-stat-card">
+            <div class="admin-stat-num" id="adminCountUsers">4</div>
+            <div class="admin-stat-label">Registered Users</div>
+          </div>
+          <div class="admin-stat-card">
+            <div class="admin-stat-num" id="adminCountPolicies">8</div>
+            <div class="admin-stat-label">Active Policies</div>
+          </div>
+          <div class="admin-stat-card">
+            <div class="admin-stat-num" id="adminCountHeldReviews">0</div>
+            <div class="admin-stat-label">Held Approvals</div>
+          </div>
+          <div class="admin-stat-card">
+            <div class="admin-stat-num" id="adminEngineStatus" style="color: #10b981;">HEALTHY</div>
+            <div class="admin-stat-label">Verification Kernel</div>
+          </div>
+        </div>
+
+        <!-- Section 1: User Identity & Access Management (IAM Matrix) -->
+        <div class="admin-section-card">
+          <div class="admin-card-header">
+            <div style="display: flex; align-items: center; gap: 0.65rem;">
+              <span style="font-size: 1.35rem;">👥</span>
+              <div>
+                <h3 class="admin-card-title">User Identity &amp; Access Matrix (IAM)</h3>
+                <span class="admin-card-subtitle">Live accounts stored in <code>users</code> table in SQLite (Zero Mock Data)</span>
+              </div>
+            </div>
+            <button class="btn-secondary" onclick="loadAdminUsersList()">
+              🔄 Refresh Users
+            </button>
+          </div>
+
+          <div class="admin-table-wrap">
+            <table class="user-registry-table" id="adminUsersTable">
+              <thead>
+                <tr>
+                  <th>User / ID</th>
+                  <th>Username</th>
+                  <th>Email</th>
+                  <th>Current Role</th>
+                  <th>Clearance</th>
+                  <th>Reassign Access Role</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody id="adminUsersTableBody">
+                <!-- Dynamically populated from SQLite users table -->
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Provision New User Form -->
+          <div class="admin-subform-box">
+            <h4 style="margin: 0 0 0.65rem; font-size: 0.85rem; color: #fff;">➕ Provision New System User to Database</h4>
+            <form id="adminFormCreateUser" onsubmit="handleAdminCreateUser(event)" style="display: flex; flex-wrap: wrap; gap: 0.65rem; align-items: flex-end;">
+              <div style="flex: 1; min-width: 140px;">
+                <label class="input-field-label">FULL NAME</label>
+                <input type="text" id="adminNewFullName" class="modal-input" placeholder="e.g. Elena Rostova" required>
+              </div>
+              <div style="flex: 1; min-width: 120px;">
+                <label class="input-field-label">USERNAME</label>
+                <input type="text" id="adminNewUsername" class="modal-input" placeholder="e.g. erostova" required pattern="[a-zA-Z0-9_\-\.]{3,30}">
+              </div>
+              <div style="flex: 1; min-width: 160px;">
+                <label class="input-field-label">EMAIL</label>
+                <input type="email" id="adminNewEmail" class="modal-input" placeholder="elena@company.com" required>
+              </div>
+              <div style="flex: 1; min-width: 150px;">
+                <label class="input-field-label">ASSIGN ROLE</label>
+                <select id="adminNewRole" class="clean-select" style="width: 100%;">
+                  <option value="OPERATOR">⚡ OPERATOR (Task Runner)</option>
+                  <option value="COMPLIANCE_OFFICER">⚖️ COMPLIANCE (Approvals)</option>
+                  <option value="VIEWER">👁️ VIEWER (Auditor)</option>
+                  <option value="SUPERADMIN">👑 SUPERADMIN (Full Root)</option>
+                </select>
+              </div>
+              <div style="flex: 1; min-width: 120px;">
+                <label class="input-field-label">PASSWORD</label>
+                <input type="password" id="adminNewPassword" class="modal-input" placeholder="Min 6 chars" required minlength="6">
+              </div>
+              <button type="submit" class="btn-primary" style="padding: 0.65rem 1.15rem; font-weight: 700;">
+                ➕ Create User
+              </button>
+            </form>
+          </div>
+        </div>
+
+        <!-- Section 2: Global Policy Switchboard -->
+        <div class="admin-section-card">
+          <div class="admin-card-header">
+            <div style="display: flex; align-items: center; gap: 0.65rem;">
+              <span style="font-size: 1.35rem;">🛡️</span>
+              <div>
+                <h3 class="admin-card-title">Global Policy Switchboard &amp; Zero-Trust Rule Engine</h3>
+                <span class="admin-card-subtitle">Live policies loaded directly from <code>policies</code> table in SQLite</span>
+              </div>
+            </div>
+            <div style="display: flex; gap: 0.5rem;">
+              <button class="btn-primary" onclick="openCreatePolicyModal()">
+                ➕ Deploy Policy Rule
+              </button>
+              <button class="btn-secondary" onclick="loadAdminPoliciesList()">
+                🔄 Refresh Policies
+              </button>
+            </div>
+          </div>
+
+          <div class="admin-table-wrap">
+            <table class="user-registry-table" id="adminPoliciesTable">
+              <thead>
+                <tr>
+                  <th>Rule ID</th>
+                  <th>Sector</th>
+                  <th>Rule Name</th>
+                  <th>Target Protected Tool</th>
+                  <th>Intervention Action</th>
+                  <th>Active Status</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody id="adminPoliciesTableBody">
+                <!-- Dynamically populated from SQLite policies table -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Section 3: Gatekeeper Chaos Switch & Real SQLite Maintenance -->
+        <div class="admin-two-col-grid">
+          
+          <!-- Chaos Simulation Control -->
+          <div class="admin-section-card">
+            <div class="admin-card-header">
+              <div style="display: flex; align-items: center; gap: 0.65rem;">
+                <span style="font-size: 1.35rem;">⚡</span>
+                <div>
+                  <h3 class="admin-card-title">Fail-Closed Verification Engine Switch</h3>
+                  <span class="admin-card-subtitle">Simulate critical gatekeeper outage</span>
+                </div>
+              </div>
+            </div>
+            <div>
+              <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0; line-height: 1.45;">
+                When simulated outage is engaged, the independent verification kernel enters fail-closed state. All protected tools are blocked unconditionally at the point of action.
+              </p>
+              <div style="display: flex; align-items: center; justify-content: space-between; padding: 0.85rem; background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: 8px; margin-top: 0.75rem;">
+                <div>
+                  <div style="font-weight: 700; color: #fff; font-size: 0.875rem;">Verification Outage Mode</div>
+                  <div id="adminChaosStateLabel" style="font-size: 0.75rem; color: #10b981; margin-top: 0.15rem;">● Kernel Online &amp; Healthy</div>
+                </div>
+                <label class="switch-toggle">
+                  <input type="checkbox" id="adminChaosSwitch" onchange="toggleAdminChaosEngine(this.checked)">
+                  <span class="slider round"></span>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <!-- SQLite Maintenance Operations -->
+          <div class="admin-section-card">
+            <div class="admin-card-header">
+              <div style="display: flex; align-items: center; gap: 0.65rem;">
+                <span style="font-size: 1.35rem;">💾</span>
+                <div>
+                  <h3 class="admin-card-title">SQLite Database Maintenance</h3>
+                  <span class="admin-card-subtitle">Real persistence layer operations (data/aegis.db)</span>
+                </div>
+              </div>
+            </div>
+            <div>
+              <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0; line-height: 1.45;">
+                Live database contains real tables: financial accounts, clinical orders, cloud resources, and audit logs. Reset restores initial seed states.
+              </p>
+              <div style="display: flex; flex-wrap: wrap; gap: 0.65rem; margin-top: 0.75rem;">
+                <button class="btn-secondary" onclick="switchTab('backend')">
+                  🔍 Open Live DB Explorer Tab
+                </button>
+                <button class="btn-danger-outline" onclick="adminResetDatabase()">
+                  ⚠️ Reset Backend Entities to Seed Data
+                </button>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+    </section>
 
   </main>
 
@@ -1338,6 +1679,8 @@
       </div>
     </div>
   </div>
+
+  </div> <!-- End appWorkspaceView -->
 
   <!-- Non-intrusive Floating Toast Notifications -->
   <div id="toastContainer"></div>

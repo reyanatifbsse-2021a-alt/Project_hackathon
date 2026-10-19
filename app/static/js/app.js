@@ -117,11 +117,15 @@ function bindEventListeners() {
 }
 
 function switchTab(tabName) {
+  if (tabName === 'admin' && (!state.currentUser || state.currentUser.role !== 'SUPERADMIN')) {
+    showToast('Clearance Denied: SuperAdmin Authority Required', 'warning');
+    tabName = 'cockpit';
+  }
   state.activeTab = tabName;
   document.querySelectorAll('.nav-tab-btn').forEach(btn => {
     btn.classList.toggle('active', btn.getAttribute('data-tab') === tabName);
   });
-  document.querySelectorAll('.tab-content-area').forEach(tab => {
+  document.querySelectorAll('.tab-content-area, .tab-pane').forEach(tab => {
     tab.classList.toggle('active', tab.id === `tab-${tabName}`);
   });
 
@@ -131,6 +135,7 @@ function switchTab(tabName) {
   if (tabName === 'audit') loadAuditLogs();
   if (tabName === 'chaos') loadChaosStatus();
   if (tabName === 'backend') loadBackendState();
+  if (tabName === 'admin') loadAdminData();
 }
 
 function applyPromptPreset(val) {
@@ -167,7 +172,7 @@ function clearConsole() {
 
 async function loadStats() {
   try {
-    const res = await fetch('/api/stats');
+    const res = await fetch('/api/stats', { headers: getAuthHeaders() });
     if (!res.ok) return;
     const stats = await res.json();
     state.stats = stats;
@@ -225,7 +230,7 @@ async function runTask(prompt) {
   try {
     const response = await fetch('/api/tasks/run_stream', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: getAuthHeaders('application/json'),
       body: JSON.stringify({
         prompt: prompt,
         sector: state.currentSector
@@ -924,7 +929,7 @@ function renderStepInspector(step) {
 
 async function loadPendingReviews() {
   try {
-    const res = await fetch('/api/reviews/pending');
+    const res = await fetch('/api/reviews/pending', { headers: getAuthHeaders() });
     const reviews = await res.json();
     state.pendingReviews = reviews;
 
@@ -1199,7 +1204,7 @@ async function loadAuditLogs() {
   if (risk && risk !== 'ALL') params.set('risk', risk);
 
   try {
-    const res = await fetch(`/api/audit?${params.toString()}`);
+    const res = await fetch(`/api/audit?${params.toString()}`, { headers: getAuthHeaders() });
     const logs = await res.json();
     state.auditLogs = logs;
     renderAuditLogs(logs);
@@ -2156,6 +2161,22 @@ function getAuthHeaders(contentType = 'application/json') {
   return headers;
 }
 
+function showAuthView() {
+  const authContainer = document.getElementById('authViewContainer');
+  const workspaceView = document.getElementById('appWorkspaceView');
+  if (authContainer) authContainer.style.display = 'flex';
+  if (workspaceView) workspaceView.style.display = 'none';
+  clearAuthFeedback();
+}
+
+function showWorkspaceView() {
+  const authContainer = document.getElementById('authViewContainer');
+  const workspaceView = document.getElementById('appWorkspaceView');
+  if (authContainer) authContainer.style.display = 'none';
+  if (workspaceView) workspaceView.style.display = 'block';
+  clearAuthFeedback();
+}
+
 async function initAuth() {
   // Bind close on outside click for user dropdown
   window.addEventListener('click', (e) => {
@@ -2166,8 +2187,10 @@ async function initAuth() {
     }
   });
 
-  try {
-    if (state.token) {
+  const savedToken = localStorage.getItem('aegis_token');
+  if (savedToken) {
+    try {
+      state.token = savedToken;
       const res = await fetch('/api/auth/me', {
         headers: getAuthHeaders()
       });
@@ -2176,16 +2199,20 @@ async function initAuth() {
         if (data.status === 'SUCCESS' && data.user) {
           state.currentUser = data.user;
           updateUserUI(data.user);
+          showWorkspaceView();
           return;
         }
       }
+    } catch (err) {
+      console.warn('Auth token verification error:', err);
     }
-
-    // Default to SuperAdmin (Wania) on first session
-    await switchDemoPersona('superadmin', true);
-  } catch (err) {
-    console.warn('Auth initialization warning:', err);
   }
+
+  // Not authenticated: Show centered Login/Registration page!
+  state.token = null;
+  state.currentUser = null;
+  localStorage.removeItem('aegis_token');
+  showAuthView();
 }
 
 function toggleUserDropdown() {
@@ -2303,6 +2330,7 @@ async function handleLogin(e) {
     localStorage.setItem('aegis_token', data.session_token);
     state.currentUser = data.user;
     updateUserUI(data.user);
+    showWorkspaceView();
     closeAuthModal();
     showToast(`Welcome back, ${data.user.full_name}! (${data.user.role})`, 'success');
   } catch (err) {
@@ -2361,6 +2389,7 @@ async function handleRegister(e) {
     localStorage.setItem('aegis_token', data.session_token);
     state.currentUser = data.user;
     updateUserUI(data.user);
+    showWorkspaceView();
     closeAuthModal();
     showToast(`Account registered successfully! Signed in as ${data.user.full_name} (${data.user.role})`, 'success');
   } catch (err) {
@@ -2375,6 +2404,7 @@ async function handleRegister(e) {
 
 async function instantSuperAdminLogin() {
   await switchDemoPersona('superadmin');
+  showWorkspaceView();
   closeAuthModal();
 }
 
@@ -2391,6 +2421,7 @@ async function switchDemoPersona(personaKey, silent = false) {
       localStorage.setItem('aegis_token', data.session_token);
       state.currentUser = data.user;
       updateUserUI(data.user);
+      showWorkspaceView();
 
       if (!silent) {
         showToast(`Switched Persona to: ${data.user.full_name} [${data.user.role}]`, 'success');
@@ -2417,9 +2448,8 @@ async function handleLogout() {
   state.currentUser = null;
   localStorage.removeItem('aegis_token');
 
-  // Re-initialize as superadmin or open auth modal
-  showToast('Signed out of current session. Opening Access Gateway...', 'info');
-  openAuthModal('login');
+  showToast('Signed out of session. Access Gateway locked.', 'info');
+  showAuthView();
 }
 
 function updateUserUI(user) {
@@ -2449,6 +2479,24 @@ function updateUserUI(user) {
   if (hRole) hRole.textContent = role;
   if (hName) hName.textContent = user.full_name || user.username;
 
+  // Update Admin Panel Active User Display
+  const adminActive = document.getElementById('adminActiveUserDisplay');
+  if (adminActive) adminActive.textContent = `${user.full_name || user.username} (${role})`;
+
+  // Admin Nav Tab Visibility
+  const navAdmin = document.getElementById('navTabAdmin');
+  if (navAdmin) {
+    if (role === 'SUPERADMIN') {
+      navAdmin.style.display = 'flex';
+      loadAdminData();
+    } else {
+      navAdmin.style.display = 'none';
+      if (state.activeTab === 'admin') {
+        switchTab('cockpit');
+      }
+    }
+  }
+
   // Update Dropdown Details
   const dAvatar = document.getElementById('dropdownAvatar');
   const dFullName = document.getElementById('dropdownFullName');
@@ -2472,81 +2520,82 @@ function updateUserUI(user) {
 
   // Apply RBAC UI Enforcement
   enforceRolePermissions(role);
+
+  // Refresh user-scoped telemetry and tables
+  loadStats();
+  if (typeof loadAuditLogs === 'function') loadAuditLogs();
+  if (typeof loadPendingReviews === 'function') loadPendingReviews();
 }
 
-function enforceRolePermissions(role) {
-  const isSuper = role === 'SUPERADMIN';
-  const isViewer = role === 'VIEWER';
+// =============================================================
+// SUPERADMIN MASTER CONTROL PANEL CONTROLLER (#tab-admin)
+// =============================================================
 
-  // Mission Studio Execute button badge
-  const btnRun = document.getElementById('btnExecuteMission');
-  if (btnRun) {
-    if (isViewer) {
-      btnRun.title = 'Auditor Mode: Read-Only Access (Execution Restricted)';
-      btnRun.style.opacity = '0.65';
-    } else {
-      btnRun.title = 'Execute Mission with Aegis Runtime point-of-action safety';
-      btnRun.style.opacity = '1';
+async function loadAdminData() {
+  if (!state.currentUser || state.currentUser.role !== 'SUPERADMIN') return;
+  loadAdminUsersList();
+  loadAdminPoliciesList();
+  updateAdminChaosUI();
+  updateAdminStatsSummary();
+}
+
+async function updateAdminStatsSummary() {
+  try {
+    const [resStats, resUsers, resPolicies] = await Promise.all([
+      fetch('/api/stats', { headers: getAuthHeaders() }),
+      fetch('/api/auth/users', { headers: getAuthHeaders() }),
+      fetch('/api/policies')
+    ]);
+
+    if (resStats.ok) {
+      const stats = await resStats.json();
+      const elHeld = document.getElementById('adminCountHeldReviews');
+      if (elHeld) elHeld.textContent = stats.pending_reviews || 0;
+      const elStatus = document.getElementById('adminEngineStatus');
+      if (elStatus) {
+        if (stats.fail_closed_mode) {
+          elStatus.textContent = 'FAIL-CLOSED';
+          elStatus.style.color = '#ef4444';
+        } else {
+          elStatus.textContent = 'HEALTHY';
+          elStatus.style.color = '#10b981';
+        }
+      }
     }
-  }
 
-  // Chaos toggle
-  const chaosToggle = document.getElementById('chaosSwitch');
-  if (chaosToggle) {
-    if (!isSuper) {
-      chaosToggle.disabled = true;
-      chaosToggle.title = 'Chaos Verification Outage toggle requires SuperAdmin authority';
-    } else {
-      chaosToggle.disabled = false;
-      chaosToggle.title = 'Simulate external outage of verification engine';
+    if (resUsers.ok) {
+      const uData = await resUsers.json();
+      const elUsers = document.getElementById('adminCountUsers');
+      if (elUsers) elUsers.textContent = (uData.users || []).length;
     }
+
+    if (resPolicies.ok) {
+      const pData = await resPolicies.json();
+      const elPol = document.getElementById('adminCountPolicies');
+      if (elPol) elPol.textContent = (pData || []).filter(p => p.enabled).length;
+    }
+  } catch (err) {
+    console.warn('Failed to update admin summary stats:', err);
   }
 }
 
-// -------------------------------------------------------------
-// LIVE USER REGISTRY MODAL (SUPERADMIN DIRECTORY)
-// -------------------------------------------------------------
-
-function openUserRegistryModal() {
-  const menu = document.getElementById('userDropdownMenu');
-  if (menu) menu.classList.remove('open');
-
-  if (state.currentUser && state.currentUser.role !== 'SUPERADMIN') {
-    showToast(`⛔ Clearance Denied: SuperAdmin root authority required to access User Directory. Current Role: ${state.currentUser.role}`, 'warning');
-    return;
-  }
-
-  const modal = document.getElementById('modalUserRegistry');
-  if (modal) modal.classList.add('open');
-  loadUserRegistry();
-}
-
-function closeUserRegistryModal() {
-  const modal = document.getElementById('modalUserRegistry');
-  if (modal) modal.classList.remove('open');
-}
-
-async function loadUserRegistry() {
-  const tbody = document.getElementById('userRegistryTableBody');
-  const countEl = document.getElementById('userRegistryCount');
+async function loadAdminUsersList() {
+  const tbody = document.getElementById('adminUsersTableBody');
   if (!tbody) return;
 
-  tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 1.5rem;">Loading live SQLite user registry...</td></tr>`;
+  tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--text-muted); padding: 1.5rem;">Loading user matrix from data/aegis.db...</td></tr>`;
 
   try {
-    const res = await fetch('/api/auth/users', {
-      headers: getAuthHeaders()
-    });
+    const res = await fetch('/api/auth/users', { headers: getAuthHeaders() });
     const data = await res.json();
     if (!res.ok || data.status !== 'SUCCESS') {
-      tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--danger); padding: 1.5rem;">Failed to fetch users: ${data.detail || data.message || 'Unauthorized'}</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--danger); padding: 1.5rem;">Failed to load users: ${data.detail || data.message || 'Unauthorized'}</td></tr>`;
       return;
     }
 
     const users = data.users || [];
-    if (countEl) countEl.textContent = `${users.length} Active Cryptographic Identities in data/aegis.db`;
-
     tbody.innerHTML = users.map(u => {
+      const isRoot = u.id === 'usr-superadmin';
       const isCurrent = state.currentUser && state.currentUser.id === u.id;
       let badgeClass = 'role-badge-viewer';
       let icon = '👤';
@@ -2556,40 +2605,36 @@ async function loadUserRegistry() {
 
       return `
         <tr>
+          <td><code style="color: var(--accent-cyan); font-size: 0.75rem;">${escapeHtml(u.id)}</code></td>
           <td>
-            <div style="display: flex; align-items: center; gap: 0.6rem;">
-              <span style="font-size: 1.25rem;">${icon}</span>
-              <div>
-                <strong style="color: var(--text-bright);">${escapeHtml(u.full_name)}</strong>
-                ${isCurrent ? '<span style="font-size: 0.65rem; background: var(--accent-cyan); color: #000; padding: 0.1rem 0.4rem; border-radius: 4px; margin-left: 0.4rem; font-weight: 700;">YOU</span>' : ''}
-                <div style="font-size: 0.725rem; color: var(--text-muted); font-family: monospace;">@${escapeHtml(u.username)}</div>
-              </div>
-            </div>
+            <div style="font-weight: 700; color: #fff;">@${escapeHtml(u.username)}</div>
+            ${isCurrent ? '<span style="font-size: 0.625rem; background: var(--accent-cyan); color: #000; padding: 0.1rem 0.35rem; border-radius: 4px; font-weight: 800;">CURRENT USER</span>' : ''}
           </td>
-          <td style="color: var(--text-main); font-family: monospace; font-size: 0.775rem;">${escapeHtml(u.email)}</td>
+          <td style="color: var(--text-bright); font-size: 0.775rem;">${escapeHtml(u.email)}</td>
+          <td><span class="role-badge-pill ${badgeClass}">${icon} ${escapeHtml(u.role)}</span></td>
+          <td style="color: var(--text-muted); font-size: 0.725rem;">${escapeHtml(u.sector_clearance || 'ALL')}</td>
           <td>
-            <span class="role-badge-pill ${badgeClass}">${icon} ${escapeHtml(u.role)}</span>
-          </td>
-          <td>
-            <select class="select-role-table" onchange="updateUserRoleInRegistry('${u.id}', this.value)">
+            <select class="select-role-table" onchange="adminChangeUserRole('${u.id}', this.value)">
               <option value="SUPERADMIN" ${u.role === 'SUPERADMIN' ? 'selected' : ''}>👑 SUPERADMIN</option>
               <option value="COMPLIANCE_OFFICER" ${u.role === 'COMPLIANCE_OFFICER' ? 'selected' : ''}>⚖️ COMPLIANCE_OFFICER</option>
               <option value="OPERATOR" ${u.role === 'OPERATOR' ? 'selected' : ''}>⚡ OPERATOR</option>
               <option value="VIEWER" ${u.role === 'VIEWER' ? 'selected' : ''}>👁️ VIEWER</option>
             </select>
           </td>
-          <td style="color: var(--text-muted); font-size: 0.75rem;">
-            ${u.created_at ? new Date(u.created_at).toLocaleDateString() : 'Active'}
+          <td>
+            <button class="btn-icon-delete" onclick="adminDeleteUser('${u.id}', '${escapeHtml(u.username)}')" ${isRoot ? 'disabled title="Protected Root SuperAdmin"' : 'title="Delete User"'}>
+              🗑️ Delete
+            </button>
           </td>
         </tr>
       `;
     }).join('');
   } catch (err) {
-    tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--danger); padding: 1.5rem;">Network Error: ${err.message}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--danger); padding: 1.5rem;">Network Error: ${err.message}</td></tr>`;
   }
 }
 
-async function updateUserRoleInRegistry(userId, newRole) {
+async function adminChangeUserRole(userId, newRole) {
   try {
     const res = await fetch(`/api/auth/users/${userId}/role`, {
       method: 'POST',
@@ -2598,19 +2643,204 @@ async function updateUserRoleInRegistry(userId, newRole) {
     });
     const data = await res.json();
     if (res.ok && data.status === 'SUCCESS') {
-      showToast(`Role updated to ${newRole} in data/aegis.db`, 'success');
-      loadUserRegistry();
-
-      // If user modified their own role, update active state
+      showToast(`User role updated to ${newRole} in data/aegis.db`, 'success');
+      loadAdminUsersList();
       if (state.currentUser && state.currentUser.id === userId) {
         state.currentUser.role = newRole;
         updateUserUI(state.currentUser);
       }
     } else {
-      showToast(`Failed to update role: ${data.detail || data.message}`, 'error');
+      showToast(`Role modification failed: ${data.detail || data.message}`, 'error');
     }
   } catch (err) {
-    showToast('Failed to update user role: ' + err.message, 'error');
+    showToast('Failed to modify user role: ' + err.message, 'error');
+  }
+}
+
+async function adminDeleteUser(userId, username) {
+  if (!confirm(`Are you sure you want to permanently delete user @${username} (${userId})?`)) return;
+  try {
+    const res = await fetch(`/api/auth/users/${userId}`, {
+      method: 'DELETE',
+      headers: getAuthHeaders()
+    });
+    const data = await res.json();
+    if (res.ok && data.status === 'SUCCESS') {
+      showToast(`User @${username} deleted successfully from SQLite`, 'success');
+      loadAdminUsersList();
+      updateAdminStatsSummary();
+    } else {
+      showToast(`Delete failed: ${data.detail || data.message}`, 'error');
+    }
+  } catch (err) {
+    showToast('Delete error: ' + err.message, 'error');
+  }
+}
+
+async function handleAdminCreateUser(e) {
+  if (e) e.preventDefault();
+  const fullName = document.getElementById('adminNewFullName')?.value.trim();
+  const username = document.getElementById('adminNewUsername')?.value.trim();
+  const email = document.getElementById('adminNewEmail')?.value.trim();
+  const role = document.getElementById('adminNewRole')?.value || 'OPERATOR';
+  const password = document.getElementById('adminNewPassword')?.value;
+
+  if (!fullName || !username || !email || !password) {
+    showToast('Please fill out all user creation fields', 'warning');
+    return;
+  }
+
+  try {
+    const res = await fetch('/api/auth/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        full_name: fullName,
+        username,
+        email,
+        role,
+        password
+      })
+    });
+    const data = await res.json();
+    if (res.ok && data.status === 'SUCCESS') {
+      showToast(`User @${username} provisioned with role ${role}`, 'success');
+      document.getElementById('adminFormCreateUser')?.reset();
+      loadAdminUsersList();
+      updateAdminStatsSummary();
+    } else {
+      showToast(`Failed to create user: ${data.detail || data.message}`, 'error');
+    }
+  } catch (err) {
+    showToast('Error provisioning user: ' + err.message, 'error');
+  }
+}
+
+async function loadAdminPoliciesList() {
+  const tbody = document.getElementById('adminPoliciesTableBody');
+  if (!tbody) return;
+
+  tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--text-muted); padding: 1.5rem;">Loading policies from SQLite...</td></tr>`;
+
+  try {
+    const res = await fetch('/api/policies');
+    const policies = await res.json();
+    tbody.innerHTML = (policies || []).map(p => {
+      const isBlocked = p.action === 'BLOCK';
+      const actionPill = isBlocked ?
+        '<span class="status-badge badge-blocked">BLOCK</span>' :
+        '<span class="status-badge badge-held">HUMAN_REVIEW</span>';
+
+      return `
+        <tr>
+          <td><code style="color: var(--accent-cyan); font-weight: 700;">${escapeHtml(p.rule_id)}</code></td>
+          <td><span style="font-size: 0.725rem; background: rgba(255,255,255,0.06); padding: 0.15rem 0.45rem; border-radius: 4px;">${escapeHtml(p.sector)}</span></td>
+          <td>
+            <div style="font-weight: 700; color: #fff;">${escapeHtml(p.name)}</div>
+            <div style="font-size: 0.725rem; color: var(--text-muted);">${escapeHtml(p.description || '')}</div>
+          </td>
+          <td><code style="color: #a5b4fc;">${escapeHtml(p.target_tool)}</code></td>
+          <td>${actionPill}</td>
+          <td>
+            <label class="switch-toggle" style="transform: scale(0.85); transform-origin: left center;">
+              <input type="checkbox" ${p.enabled ? 'checked' : ''} onchange="adminTogglePolicy('${p.rule_id}', this.checked)">
+              <span class="slider round"></span>
+            </label>
+          </td>
+          <td>
+            <button class="btn-icon-delete" onclick="adminDeletePolicy('${p.rule_id}')" title="Delete policy from database">
+              🗑️
+            </button>
+          </td>
+        </tr>
+      `;
+    }).join('');
+  } catch (err) {
+    tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--danger); padding: 1.5rem;">Failed to load policies: ${err.message}</td></tr>`;
+  }
+}
+
+async function adminTogglePolicy(ruleId, enabled) {
+  try {
+    const res = await fetch('/api/policies/toggle', {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ rule_id: ruleId, enabled })
+    });
+    if (res.ok) {
+      showToast(`Policy ${ruleId} is now ${enabled ? 'ACTIVE' : 'DISABLED'}`, 'info');
+      if (typeof loadPolicies === 'function') loadPolicies();
+      updateAdminStatsSummary();
+    }
+  } catch (err) {
+    showToast('Failed to toggle policy: ' + err.message, 'error');
+  }
+}
+
+async function adminDeletePolicy(ruleId) {
+  if (!confirm(`Delete policy ${ruleId} from live SQLite database?`)) return;
+  try {
+    const res = await fetch(`/api/policies/${ruleId}`, {
+      method: 'DELETE',
+      headers: getAuthHeaders()
+    });
+    const data = await res.json();
+    if (res.ok && data.status === 'SUCCESS') {
+      showToast(`Policy ${ruleId} deleted from database`, 'success');
+      loadAdminPoliciesList();
+      if (typeof loadPolicies === 'function') loadPolicies();
+      updateAdminStatsSummary();
+    } else {
+      showToast(`Delete policy failed: ${data.detail || data.message}`, 'error');
+    }
+  } catch (err) {
+    showToast('Policy deletion error: ' + err.message, 'error');
+  }
+}
+
+function updateAdminChaosUI() {
+  const switchEl = document.getElementById('adminChaosSwitch');
+  const labelEl = document.getElementById('adminChaosStateLabel');
+  if (switchEl) switchEl.checked = state.chaosMode;
+  if (labelEl) {
+    if (state.chaosMode) {
+      labelEl.innerHTML = '● CRITICAL: Engine OFFLINE (Fail-Closed Zero Trust)';
+      labelEl.style.color = '#ef4444';
+    } else {
+      labelEl.innerHTML = '● Kernel Online &amp; Healthy';
+      labelEl.style.color = '#10b981';
+    }
+  }
+}
+
+async function toggleAdminChaosEngine(offline) {
+  try {
+    await toggleChaos(offline);
+    updateAdminChaosUI();
+    updateAdminStatsSummary();
+  } catch (err) {
+    showToast('Failed to switch chaos engine: ' + err.message, 'error');
+  }
+}
+
+async function adminResetDatabase() {
+  if (!confirm('Are you sure you want to restore financial accounts, clinical orders, and GovCloud resources to clean baseline seed data?')) return;
+  try {
+    const res = await fetch('/api/backend/reset', {
+      method: 'POST',
+      headers: getAuthHeaders()
+    });
+    const data = await res.json();
+    if (res.ok && data.status === 'SUCCESS') {
+      showToast('Database baseline entities successfully re-seeded!', 'success');
+      if (typeof loadBackendState === 'function') loadBackendState();
+      loadStats();
+      updateAdminStatsSummary();
+    } else {
+      showToast(`Database reset failed: ${data.detail || data.message}`, 'error');
+    }
+  } catch (err) {
+    showToast('Reset error: ' + err.message, 'error');
   }
 }
 
