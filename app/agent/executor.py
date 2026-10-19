@@ -166,3 +166,169 @@ class WorkflowExecutor:
             if s.status == StepStatus.PAUSED_DEPENDENCY:
                 s.status = StepStatus.PROPOSED
         return self.execute_plan(plan)
+
+    def execute_plan_stream(self, plan: TaskPlan):
+        """
+        Yields progressive execution events in real time.
+        Allows the UI to watch the agent reason, propose actions, and undergo
+        point-of-action verification progressively.
+        """
+        executed_ids: Set[str] = {s.step_id for s in plan.steps if s.status == StepStatus.EXECUTED}
+        blocked_ids: Set[str] = {s.step_id for s in plan.steps if s.status == StepStatus.BLOCKED}
+        paused_ids: Set[str] = {s.step_id for s in plan.steps if s.status == StepStatus.PAUSED_DEPENDENCY}
+        held_ids: Set[str] = {s.step_id for s in plan.steps if s.status == StepStatus.HELD_FOR_REVIEW}
+
+        changed = True
+        while changed:
+            changed = False
+            for step in plan.steps:
+                if step.status not in [StepStatus.PROPOSED]:
+                    continue
+
+                deps = step.dependencies
+                upstream_blocked_or_paused = any(
+                    (d in blocked_ids or d in paused_ids or d in held_ids) for d in deps
+                )
+
+                if upstream_blocked_or_paused:
+                    step.status = StepStatus.PAUSED_DEPENDENCY
+                    blocked_upstream = [d for d in deps if (d in blocked_ids or d in paused_ids or d in held_ids)]
+                    step.notes = f"Branch Quarantined: Dependent upstream step(s) {blocked_upstream} did not complete safely. Step paused to maintain state integrity."
+                    paused_ids.add(step.step_id)
+                    changed = True
+                    yield {
+                        "event": "BRANCH_ISOLATED",
+                        "step_id": step.step_id,
+                        "title": step.title,
+                        "reason": f"Dependent step paused because upstream step {blocked_upstream} did not complete safely.",
+                        "step": step.dict()
+                    }
+                    continue
+
+                all_deps_completed = all(d in executed_ids for d in deps)
+                if not all_deps_completed:
+                    continue
+
+                changed = True
+                action = step.proposed_action
+
+                # Emit Step Start / Agent Thought event
+                yield {
+                    "event": "STEP_START",
+                    "step_id": step.step_id,
+                    "title": step.title,
+                    "thought": f"Agent formulating action: Calling tool '{action.tool_name if action else 'none'}' to {step.description.lower()}",
+                    "step": step.dict()
+                }
+
+                if not action or not action.is_protected:
+                    exec_res = self.tool_registry.execute_tool(
+                        action.tool_name if action else "read_data",
+                        action.parameters if action else {}
+                    )
+                    step.status = StepStatus.EXECUTED
+                    step.execution_result = exec_res
+                    executed_ids.add(step.step_id)
+                    yield {
+                        "event": "STEP_EXECUTED",
+                        "step_id": step.step_id,
+                        "title": step.title,
+                        "decision": "ALLOW",
+                        "is_protected": False,
+                        "step": step.dict()
+                    }
+                    continue
+
+                # Point-of-action runtime intervention
+                verification = self.verifier.verify_action(
+                    task_id=plan.task_id,
+                    user_request=plan.user_request,
+                    action=action,
+                    sector=plan.sector
+                )
+                step.verification_result = verification
+
+                yield {
+                    "event": "POINT_OF_ACTION_INTERCEPT",
+                    "step_id": step.step_id,
+                    "title": step.title,
+                    "decision": verification.decision.value,
+                    "policy_id": verification.policy_id,
+                    "rule_name": verification.rule_name,
+                    "risk_category": verification.risk_category.value,
+                    "reason": verification.reason,
+                    "token_minted": verification.token is not None,
+                    "step": step.dict()
+                }
+
+                if verification.decision == Decision.ALLOW:
+                    exec_res = self.tool_registry.execute_tool(
+                        action.tool_name,
+                        action.parameters,
+                        token=verification.token
+                    )
+                    step.status = StepStatus.EXECUTED
+                    step.execution_result = exec_res
+                    executed_ids.add(step.step_id)
+                    yield {
+                        "event": "STEP_EXECUTED",
+                        "step_id": step.step_id,
+                        "title": step.title,
+                        "decision": "ALLOW",
+                        "is_protected": True,
+                        "step": step.dict()
+                    }
+
+                elif verification.decision == Decision.HUMAN_REVIEW:
+                    step.status = StepStatus.HELD_FOR_REVIEW
+                    step.notes = f"Action placed in Human Approval Queue under rule {verification.policy_id}."
+                    held_ids.add(step.step_id)
+                    yield {
+                        "event": "STEP_HELD",
+                        "step_id": step.step_id,
+                        "title": step.title,
+                        "policy_id": verification.policy_id,
+                        "reason": verification.reason,
+                        "step": step.dict()
+                    }
+
+                elif verification.decision == Decision.BLOCK:
+                    step.status = StepStatus.BLOCKED
+                    blocked_ids.add(step.step_id)
+                    step.notes = f"Blocked by Verification Engine ({verification.policy_id}): {verification.reason}"
+                    if verification.safe_alternative_suggested:
+                        step.notes += f" [Safe Workaround Recommended: {verification.safe_alternative_suggested}]"
+                    yield {
+                        "event": "STEP_BLOCKED",
+                        "step_id": step.step_id,
+                        "title": step.title,
+                        "policy_id": verification.policy_id,
+                        "reason": verification.reason,
+                        "safe_alternative": verification.safe_alternative_suggested,
+                        "step": step.dict()
+                    }
+
+        plan.completed_steps_count = len(executed_ids)
+        plan.blocked_steps_count = len(blocked_ids)
+        plan.paused_steps_count = len(paused_ids)
+
+        if len(blocked_ids) > 0 or len(held_ids) > 0:
+            if len(executed_ids) > 0:
+                plan.status = "PARTIALLY_COMPLETED_CONTINUED"
+                plan.summary = (
+                    f"Workflow Continuity Active: {len(executed_ids)} safe independent step(s) completed. "
+                    f"{len(blocked_ids)} prohibited action(s) blocked at runtime, and {len(paused_ids)} "
+                    f"dependent downstream step(s) safely isolated."
+                )
+            else:
+                plan.status = "INTERCEPTED_HELD"
+                plan.summary = f"Execution halted: {len(blocked_ids)} blocked action(s), {len(held_ids)} held for review."
+        else:
+            plan.status = "COMPLETED_SUCCESSFULLY"
+            plan.summary = f"All {len(executed_ids)} plan steps verified and executed safely."
+
+        yield {
+            "event": "PLAN_FINAL",
+            "plan": plan.dict()
+        }
+

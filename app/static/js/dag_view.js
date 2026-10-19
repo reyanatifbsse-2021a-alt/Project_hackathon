@@ -1,6 +1,7 @@
 /**
- * AegisRuntime - Enhanced Interactive DAG & Step Pipeline Visualizer
- * Visualizes multi-step dependency graphs, runtime interventions, and branch isolation.
+ * AegisRuntime - Advanced Interactive DAG Pipeline Visualizer
+ * Renders multi-step dependency graphs, live progressive execution states,
+ * cryptographic PoA token gates, branch isolation barriers, and inline human clearance controls.
  */
 
 class DagVisualizer {
@@ -11,142 +12,302 @@ class DagVisualizer {
     this.selectedStepId = null;
   }
 
-  async render(plan, animate = false) {
+  showLoadingState(message = 'Synthesizing Cognitive DAG...') {
+    if (!this.container) return;
+    this.container.innerHTML = `
+      <div class="dag-standby-state">
+        <div class="dag-radar-spinner"></div>
+        <div class="dag-standby-title">${escapeHtml(message)}</div>
+        <div class="dag-standby-sub">Parsing prompt entities, tools, dependencies, and security boundaries</div>
+      </div>
+    `;
+  }
+
+  render(plan, isInitial = false) {
     this.currentPlan = plan;
     if (!this.container) return;
     this.container.innerHTML = '';
 
     if (!plan || !plan.steps || plan.steps.length === 0) {
       this.container.innerHTML = `
-        <div style="text-align: center; color: var(--text-dim); padding: 4rem 1rem;">
-          <svg style="width: 56px; height: 56px; margin-bottom: 1rem; fill: currentColor; opacity: 0.6;" viewBox="0 0 24 24">
+        <div class="dag-standby-state">
+          <svg class="dag-standby-icon" viewBox="0 0 24 24">
             <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
           </svg>
-          <div style="font-weight: 700; font-size: 1.1rem; color: var(--text-main);">Execution Pipeline Standby</div>
-          <div style="font-size: 0.825rem; margin-top: 0.35rem; color: var(--text-muted);">Select any scenario preset above or type a natural language prompt to begin.</div>
+          <div class="dag-standby-title">Workflow DAG Standby</div>
+          <div class="dag-standby-sub">Select a scenario preset above or type a natural language prompt to begin real-time agent execution.</div>
         </div>
       `;
       return;
     }
 
-    // Execution Summary Banner
+    // 1. Top Workflow Continuity Summary Card
     const summaryCard = document.createElement('div');
-    summaryCard.className = 'glass-panel';
-    summaryCard.style.padding = '0.85rem 1.35rem';
-    summaryCard.style.marginBottom = '1.25rem';
-    summaryCard.style.background = 'rgba(12, 20, 39, 0.95)';
+    summaryCard.className = 'dag-summary-card';
+    summaryCard.id = 'dagSummaryBanner';
 
-    const isFullSuccess = plan.status === 'COMPLETED_SUCCESSFULLY';
-    const isPartial = plan.status === 'PARTIALLY_COMPLETED_CONTINUED';
-    const borderColor = isFullSuccess ? 'var(--accent-emerald)' : (isPartial ? 'var(--accent-cyan)' : 'var(--accent-ruby)');
-    summaryCard.style.borderLeft = `5px solid ${borderColor}`;
+    const status = plan.status || 'PROPOSED';
+    const isCompleted = status === 'COMPLETED_SUCCESSFULLY';
+    const isPartial = status === 'PARTIALLY_COMPLETED_CONTINUED';
+    const isHeld = status === 'INTERCEPTED_HELD';
+
+    let statusClass = 'status-proposed';
+    let statusLabel = 'INITIALIZED (READY)';
+    if (isCompleted) {
+      statusClass = 'status-completed';
+      statusLabel = 'SUCCESSFULLY COMPLETED';
+    } else if (isPartial) {
+      statusClass = 'status-partial';
+      statusLabel = 'WORKFLOW CONTINUITY ACTIVE';
+    } else if (isHeld) {
+      statusClass = 'status-held';
+      statusLabel = 'INTERCEPTED / HELD';
+    }
 
     summaryCard.innerHTML = `
-      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
-        <div>
-          <div style="display: flex; align-items: center; gap: 0.5rem;">
-            <span style="font-weight: 800; font-size: 0.875rem; color: ${borderColor};">${escapeHtml(plan.status.replace(/_/g, ' '))}</span>
-            <span style="font-size: 0.75rem; color: var(--text-dim); font-family: var(--font-mono);">ID: ${escapeHtml(plan.task_id)}</span>
-          </div>
-          <div style="color: var(--text-muted); font-size: 0.8rem; margin-top: 0.25rem; line-height: 1.35;">${escapeHtml(plan.summary || '')}</div>
+      <div class="dag-summary-header">
+        <div class="dag-summary-title-wrap">
+          <span class="dag-summary-badge ${statusClass}">${escapeHtml(statusLabel)}</span>
+          <span class="dag-task-id">TASK: ${escapeHtml(plan.task_id || 'ID-TBD')}</span>
         </div>
-        <div style="display: flex; gap: 0.85rem; font-family: var(--font-mono); font-size: 0.775rem;">
-          <span style="color: var(--accent-emerald); font-weight: 700;">✔ ${plan.completed_steps_count || 0} Executed</span>
-          <span style="color: var(--accent-ruby); font-weight: 700;">🛡 ${plan.blocked_steps_count || 0} Intercepted</span>
-          <span style="color: var(--accent-amber); font-weight: 700;">⏸ ${plan.paused_steps_count || 0} Isolated</span>
+        <div class="dag-summary-metrics">
+          <span class="metric-pill metric-exec">✔ <strong>${plan.completed_steps_count || 0}</strong> Executed</span>
+          <span class="metric-pill metric-block">🛡 <strong>${plan.blocked_steps_count || 0}</strong> Intercepted</span>
+          <span class="metric-pill metric-pause">⏸ <strong>${plan.paused_steps_count || 0}</strong> Isolated</span>
         </div>
+      </div>
+      <div class="dag-summary-text" id="dagSummaryText">
+        ${escapeHtml(plan.summary || 'Cognitive task decomposed into dependency steps. Beginning point-of-action verification...')}
       </div>
     `;
     this.container.appendChild(summaryCard);
 
-    // Render Steps in DAG Sequence
-    const stepsList = document.createElement('div');
-    stepsList.style.display = 'flex';
-    stepsList.style.flexDirection = 'column';
-    stepsList.style.gap = '1.15rem';
+    // 2. DAG Flow Canvas
+    const flowContainer = document.createElement('div');
+    flowContainer.className = 'dag-pipeline-flow';
+    flowContainer.id = 'dagPipelineFlow';
 
+    // Group steps into sequence or parallel tracks
     plan.steps.forEach((step, index) => {
+      // If not the first step, render dependency flow connector
+      if (index > 0) {
+        const connector = this.createFlowConnector(step, plan.steps[index - 1]);
+        flowContainer.appendChild(connector);
+      }
+
+      // Render step node card
       const nodeEl = this.createStepNodeElement(step, index);
-      stepsList.appendChild(nodeEl);
+      flowContainer.appendChild(nodeEl);
     });
 
-    this.container.appendChild(stepsList);
+    this.container.appendChild(flowContainer);
 
-    // If animate flag is set, run sequential highlight sweep
-    if (animate) {
-      for (let i = 0; i < plan.steps.length; i++) {
-        const s = plan.steps[i];
-        const el = document.getElementById(`node-${s.step_id}`);
-        if (el) {
-          el.style.transform = 'scale(1.02)';
-          await new Promise(r => setTimeout(r, 120));
-          el.style.transform = '';
-        }
-      }
+    // Auto-select priority step
+    const targetStep = plan.steps.find(s => s.status === 'BLOCKED' || s.status === 'HELD_FOR_REVIEW') || plan.steps[0];
+    if (targetStep) {
+      this.selectNode(targetStep.step_id);
     }
+  }
 
-    // Auto-select priority step: first blocked or held step, else first step
-    const priorityStep = plan.steps.find(s => s.status === 'BLOCKED' || s.status === 'HELD_FOR_REVIEW') || plan.steps[0];
-    if (priorityStep) {
-      this.selectNode(priorityStep.step_id);
+  createFlowConnector(currStep, prevStep) {
+    const conn = document.createElement('div');
+    conn.className = 'dag-connector';
+    conn.id = `conn-${currStep.step_id}`;
+
+    const isDep = currStep.dependencies && currStep.dependencies.length > 0;
+    const isUpstreamBlocked = prevStep && (prevStep.status === 'BLOCKED' || prevStep.status === 'PAUSED_DEPENDENCY');
+
+    if (!isDep) {
+      // Independent parallel branch
+      conn.innerHTML = `
+        <div class="dag-branch-pill independent">
+          <span class="pulse-beacon green"></span>
+          <span>⚡ Autonomous Parallel Safe Branch (Independent Execution)</span>
+        </div>
+      `;
+    } else if (currStep.status === 'PAUSED_DEPENDENCY' || isUpstreamBlocked) {
+      // Branch quarantined
+      conn.innerHTML = `
+        <div class="dag-branch-pill quarantined">
+          <span class="pulse-beacon orange"></span>
+          <span>🚫 Branch Quarantined (Dependency Upstream Intercepted)</span>
+        </div>
+      `;
+    } else {
+      // Standard sequential dependency
+      conn.innerHTML = `
+        <div class="dag-branch-arrow">
+          <svg viewBox="0 0 24 24"><path d="M12 4v16m0 0l-5-5m5 5l5-5"/></svg>
+          <span class="dag-arrow-text">Prerequisite Met ↳ Advancing to ${currStep.step_id}</span>
+        </div>
+      `;
     }
+    return conn;
   }
 
   createStepNodeElement(step, index) {
     const el = document.createElement('div');
-    el.className = `dag-step-node status-${step.status}`;
+    el.className = `dag-step-node node-${step.status.toLowerCase()}`;
     el.id = `node-${step.step_id}`;
     el.onclick = () => this.selectNode(step.step_id);
 
+    const stepNum = String(index + 1).padStart(2, '0');
+    const isProtected = step.proposed_action ? step.proposed_action.is_protected : false;
+    const toolName = step.proposed_action ? step.proposed_action.tool_name : 'unassigned';
+
     let badgeClass = 'badge-proposed';
-    let badgeLabel = step.status;
+    let badgeText = 'PROPOSED';
     let badgeIcon = '●';
 
     if (step.status === 'EXECUTED') {
       badgeClass = 'badge-executed';
-      badgeLabel = 'EXECUTED (ALLOW)';
+      badgeText = 'EXECUTED (ALLOW)';
       badgeIcon = '✔';
     } else if (step.status === 'BLOCKED') {
       badgeClass = 'badge-blocked';
-      badgeLabel = 'BLOCKED (INTERCEPTED)';
+      badgeText = 'BLOCKED (INTERCEPTED)';
       badgeIcon = '🛡 ✖';
     } else if (step.status === 'HELD_FOR_REVIEW') {
       badgeClass = 'badge-held';
-      badgeLabel = 'HELD FOR CLEARANCE';
+      badgeText = 'HELD FOR CLEARANCE';
       badgeIcon = '⚠ 👤';
     } else if (step.status === 'PAUSED_DEPENDENCY') {
       badgeClass = 'badge-paused';
-      badgeLabel = 'BRANCH ISOLATED';
+      badgeText = 'BRANCH ISOLATED';
       badgeIcon = '⏸';
     }
 
     const hasDeps = step.dependencies && step.dependencies.length > 0;
-    const depsInfo = hasDeps
-      ? `<span style="color: var(--text-dim); font-size: 0.725rem; font-family: var(--font-mono); background: rgba(0,0,0,0.3); padding: 0.15rem 0.5rem; border-radius: 4px;">↳ Depends on: [${step.dependencies.join(', ')}]</span>`
-      : `<span style="color: var(--accent-cyan); font-size: 0.725rem; font-family: var(--font-mono); background: rgba(0, 245, 255, 0.08); padding: 0.15rem 0.5rem; border-radius: 4px;">⚡ Independent Safe Branch</span>`;
+    const depsMarkup = hasDeps
+      ? `<span class="step-dep-pill">↳ Depends on: [${step.dependencies.join(', ')}]</span>`
+      : `<span class="step-dep-pill independent">⚡ Independent Safe Branch</span>`;
 
-    const toolName = step.proposed_action ? step.proposed_action.tool_name : 'unassigned';
-    const isProtected = step.proposed_action ? step.proposed_action.is_protected : false;
+    // Inline clearance action if held
+    let inlineClearanceMarkup = '';
+    if (step.status === 'HELD_FOR_REVIEW' && this.currentPlan) {
+      inlineClearanceMarkup = `
+        <div class="step-inline-clearance" onclick="event.stopPropagation()">
+          <div class="clearance-head">
+            <span class="pulse-beacon orange"></span>
+            <strong>Dual-Control Clearance Required</strong>
+          </div>
+          <div class="clearance-desc">Sensitive operation suspended at point-of-action. Approve to mint PoA token and resume.</div>
+          <div class="clearance-btn-group">
+            <button class="btn-clearance-approve" onclick="window.handleInlineApproval('${this.currentPlan.task_id}', '${step.step_id}', true)">
+              ✔ Approve & Resume DAG
+            </button>
+            <button class="btn-clearance-reject" onclick="window.handleInlineApproval('${this.currentPlan.task_id}', '${step.step_id}', false)">
+              ✖ Reject / Halt
+            </button>
+          </div>
+        </div>
+      `;
+    }
 
     el.innerHTML = `
       <div class="step-node-header">
-        <div style="display: flex; align-items: center; gap: 0.6rem;">
-          <span class="step-node-id">${step.step_id}</span>
-          ${depsInfo}
+        <div class="step-node-left">
+          <span class="step-seq-pill">${stepNum}</span>
+          <span class="step-id-text">${escapeHtml(step.step_id)}</span>
+          ${depsMarkup}
         </div>
-        <span class="status-badge ${badgeClass}">${badgeIcon} ${badgeLabel}</span>
+        <div class="step-node-right">
+          <span class="status-badge ${badgeClass}" id="badge-${step.step_id}">${badgeIcon} ${badgeText}</span>
+        </div>
       </div>
-      <div class="step-node-title">${escapeHtml(step.title)}</div>
-      <div class="step-node-desc">${escapeHtml(step.description)}</div>
-      <div class="step-node-tool-meta">
-        <span>🔧 Tool: <strong style="color: var(--text-main); font-family: var(--font-mono);">${escapeHtml(toolName)}</strong></span>
-        <span>${isProtected ? '<strong style="color: var(--accent-amber);">🔒 Protected Tool (PoA Required)</strong>' : '<span style="color: var(--accent-emerald);">🔓 Safe Read-Only Tool</span>'}</span>
-        ${step.verification_result ? `<span style="color: var(--text-dim);">Policy: <strong style="color: var(--accent-cyan);">${escapeHtml(step.verification_result.policy_id)}</strong></span>` : ''}
+
+      <div class="step-node-body">
+        <div class="step-node-title">${escapeHtml(step.title)}</div>
+        <div class="step-node-desc">${escapeHtml(step.description)}</div>
+
+        <div class="step-node-meta-grid">
+          <div class="meta-item">
+            <span class="meta-label">Tool:</span>
+            <span class="meta-val tool-code">${escapeHtml(toolName)}</span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">Point-of-Action:</span>
+            <span class="meta-val">${isProtected ? '<strong style="color: var(--accent-amber);">🔒 Gated (PoA Required)</strong>' : '<span style="color: var(--accent-emerald);">🔓 Safe Read</span>'}</span>
+          </div>
+          ${step.verification_result ? `
+            <div class="meta-item">
+              <span class="meta-label">Policy:</span>
+              <span class="meta-val policy-code">${escapeHtml(step.verification_result.policy_id)}</span>
+            </div>
+          ` : ''}
+        </div>
+
+        ${step.notes ? `
+          <div class="step-node-notes ${step.status === 'BLOCKED' ? 'note-blocked' : (step.status === 'PAUSED_DEPENDENCY' ? 'note-isolated' : '')}">
+            ${escapeHtml(step.notes)}
+          </div>
+        ` : ''}
+
+        ${inlineClearanceMarkup}
       </div>
-      ${step.notes ? `<div class="step-node-notes">${escapeHtml(step.notes)}</div>` : ''}
     `;
 
     return el;
+  }
+
+  markStepActive(stepId, stateType = 'evaluating') {
+    const nodeEl = document.getElementById(`node-${stepId}`);
+    if (!nodeEl) return;
+
+    nodeEl.classList.remove('node-evaluating', 'node-verifying');
+    if (stateType === 'evaluating') {
+      nodeEl.classList.add('node-evaluating');
+      const badge = document.getElementById(`badge-${stepId}`);
+      if (badge) {
+        badge.className = 'status-badge badge-running';
+        badge.innerHTML = `<span class="pulse-beacon cyan"></span> EVALUATING`;
+      }
+    } else if (stateType === 'verifying') {
+      nodeEl.classList.add('node-verifying');
+      const badge = document.getElementById(`badge-${stepId}`);
+      if (badge) {
+        badge.className = 'status-badge badge-verifying';
+        badge.innerHTML = `<span class="pulse-beacon amber"></span> POINT-OF-ACTION CHECK`;
+      }
+    }
+  }
+
+  updateStep(updatedStep) {
+    if (!this.currentPlan) return;
+    const idx = this.currentPlan.steps.findIndex(s => s.step_id === updatedStep.step_id);
+    if (idx !== -1) {
+      this.currentPlan.steps[idx] = updatedStep;
+    }
+
+    const oldEl = document.getElementById(`node-${updatedStep.step_id}`);
+    if (oldEl) {
+      const isSelected = oldEl.classList.contains('selected');
+      const newEl = this.createStepNodeElement(updatedStep, idx);
+      if (isSelected) newEl.classList.add('selected');
+      oldEl.replaceWith(newEl);
+    }
+
+    // Update connector if present
+    const connEl = document.getElementById(`conn-${updatedStep.step_id}`);
+    if (connEl && idx > 0) {
+      const prevStep = this.currentPlan.steps[idx - 1];
+      const newConn = this.createFlowConnector(updatedStep, prevStep);
+      connEl.replaceWith(newConn);
+    }
+
+    if (this.selectedStepId === updatedStep.step_id && this.onNodeSelected) {
+      this.onNodeSelected(updatedStep);
+    }
+  }
+
+  isolateStep(stepId, reason) {
+    if (!this.currentPlan) return;
+    const step = this.currentPlan.steps.find(s => s.step_id === stepId);
+    if (step) {
+      step.status = 'PAUSED_DEPENDENCY';
+      step.notes = reason || 'Branch Quarantined: Dependent upstream failed.';
+      this.updateStep(step);
+    }
   }
 
   selectNode(stepId) {
@@ -178,3 +339,5 @@ function escapeHtml(str) {
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#039;');
 }
+
+window.DagVisualizer = DagVisualizer;

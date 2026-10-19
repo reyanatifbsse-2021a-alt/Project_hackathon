@@ -6,11 +6,12 @@ ground-truth evidence verifier, chaos simulator, and audit log exporter.
 
 from fastapi import FastAPI, HTTPException, Query, Response
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse, PlainTextResponse
+from fastapi.responses import FileResponse, PlainTextResponse, StreamingResponse
 from pydantic import BaseModel
 from typing import Optional, List, Dict, Any
 import os
 import json
+import asyncio
 
 from app.core.models import (
     SectorProfile, ClaimVerificationRequest, ClaimVerificationRecord,
@@ -81,6 +82,24 @@ def run_task(req: RunTaskRequest):
     executed_plan = executor.execute_plan(plan)
     _ACTIVE_PLANS[executed_plan.task_id] = executed_plan
     return executed_plan
+
+
+@app.post("/api/tasks/run_stream")
+async def run_task_stream(req: RunTaskRequest):
+    plan = planner.plan_task(req.prompt, req.sector)
+    _ACTIVE_PLANS[plan.task_id] = plan
+
+    async def event_generator():
+        # Step 0: Emit synthesized DAG plan so client immediately draws all proposed nodes!
+        yield f"data: {json.dumps({'event': 'PLAN_INITIALIZED', 'plan': plan.dict()})}\n\n"
+        await asyncio.sleep(0.4)
+
+        for event_data in executor.execute_plan_stream(plan):
+            yield f"data: {json.dumps(event_data)}\n\n"
+            await asyncio.sleep(0.4)
+        _ACTIVE_PLANS[plan.task_id] = plan
+
+    return StreamingResponse(event_generator(), media_type="text/event-stream")
 
 
 @app.get("/api/tasks/{task_id}")
