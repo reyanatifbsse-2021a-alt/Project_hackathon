@@ -2239,6 +2239,87 @@ function closeAuthModal() {
   clearAuthFeedback();
 }
 
+function openUserRegistryModal() {
+  const menu = document.getElementById('userDropdownMenu');
+  if (menu) menu.classList.remove('open');
+
+  if (currentUser && currentUser.role === 'SUPERADMIN') {
+    const modal = document.getElementById('modalUserRegistry');
+    if (modal) {
+      modal.classList.add('open');
+      loadUserRegistry();
+    }
+  } else {
+    showToast('Access Denied: Only SuperAdmin (Wania) can manage the User Registry.', 'warning');
+  }
+}
+
+function closeUserRegistryModal() {
+  const modal = document.getElementById('modalUserRegistry');
+  if (modal) modal.classList.remove('open');
+}
+
+async function loadUserRegistry() {
+  const tbody = document.getElementById('userRegistryTableBody');
+  const countSpan = document.getElementById('userRegistryCount');
+  if (!tbody) return;
+
+  tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 1.5rem;">Loading user directory from SQLite...</td></tr>`;
+
+  try {
+    const res = await fetch('/api/auth/users', { credentials: 'include', headers: getAuthHeaders() });
+    if (!res.ok) {
+      tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--accent-red); padding: 1.5rem;">Access Denied (403): SuperAdmin privileges required.</td></tr>`;
+      return;
+    }
+    const data = await res.json();
+    const users = data.users || [];
+    if (countSpan) countSpan.textContent = `${users.length} Active Users in SQLite`;
+
+    if (users.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 1.5rem;">No registered users found.</td></tr>`;
+      return;
+    }
+
+    const safeEsc = typeof escapeHtml === 'function' ? escapeHtml : (str => String(str || '').replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m])));
+
+    tbody.innerHTML = users.map(u => {
+      const isSuper = u.id === 'usr-superadmin';
+      const roleColor = u.role === 'SUPERADMIN' ? '#fbbf24' : u.role === 'COMPLIANCE_OFFICER' ? '#00f0ff' : '#a78bfa';
+      return `
+        <tr>
+          <td>
+            <div style="font-weight: 600; color: #fff;">${safeEsc(u.display_name || u.username)}</div>
+            <div style="font-size: 0.725rem; color: var(--text-muted);">@${safeEsc(u.username)} (${safeEsc(u.id)})</div>
+          </td>
+          <td><code style="font-size: 0.75rem;">${safeEsc(u.email || 'N/A')}</code></td>
+          <td>
+            <span style="display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 0.725rem; font-weight: 700; background: rgba(255,255,255,0.06); border: 1px solid ${roleColor}; color: ${roleColor};">
+              ${safeEsc(u.role)}
+            </span>
+          </td>
+          <td>
+            ${isSuper ? '<span style="font-size: 0.75rem; color: #fbbf24;">👑 Protected Root</span>' : `
+              <select onchange="adminChangeUserRole('${u.id}', this.value); setTimeout(loadUserRegistry, 300);" style="background: #111827; color: #fff; border: 1px solid #374151; border-radius: 4px; padding: 3px 6px; font-size: 0.75rem;">
+                <option value="OPERATOR" ${u.role === 'OPERATOR' ? 'selected' : ''}>Operator</option>
+                <option value="COMPLIANCE_OFFICER" ${u.role === 'COMPLIANCE_OFFICER' ? 'selected' : ''}>Compliance Officer</option>
+                <option value="AUDITOR" ${u.role === 'AUDITOR' ? 'selected' : ''}>Auditor</option>
+                <option value="SUPERADMIN" ${u.role === 'SUPERADMIN' ? 'selected' : ''}>SuperAdmin</option>
+              </select>
+            `}
+          </td>
+          <td style="font-size: 0.75rem; color: var(--text-muted);">
+            ${u.created_at ? new Date(u.created_at * 1000).toLocaleDateString() : 'Active'}
+          </td>
+        </tr>
+      `;
+    }).join('');
+  } catch (err) {
+    console.error('Failed to load user registry modal:', err);
+    tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--accent-red); padding: 1.5rem;">Network error loading users.</td></tr>`;
+  }
+}
+
 function switchAuthTab(tab) {
   const btnLogin = document.getElementById('authTabLogin');
   const btnReg = document.getElementById('authTabRegister');

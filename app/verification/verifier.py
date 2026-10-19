@@ -14,6 +14,7 @@ from app.core.database import log_audit_record, add_human_review_item
 from app.policy.policy_engine import PolicyEngine
 from app.verification.chaos import is_engine_offline
 import time
+from typing import Optional
 
 
 class ActionVerificationEngine:
