@@ -744,11 +744,27 @@ class UpdateRoleRequest(BaseModel):
     role: str
 
 @app.post("/api/auth/users/{user_id}/role")
-def change_user_role(user_id: str, req: UpdateRoleRequest):
+def change_user_role(user_id: str, req: UpdateRoleRequest, authorization: Optional[str] = Header(None)):
+    user = get_current_active_user(authorization)
+    if user and user.get("role") != "SUPERADMIN":
+        raise HTTPException(status_code=403, detail="SuperAdmin role required to modify user roles.")
     success = update_user_role(user_id, req.role)
     if not success:
         raise HTTPException(status_code=400, detail="Failed to update role. Invalid user ID or role.")
     return {"status": "SUCCESS", "user_id": user_id, "new_role": req.role}
+
+
+@app.delete("/api/auth/users/{user_id}")
+def remove_user(user_id: str, authorization: Optional[str] = Header(None)):
+    user = get_current_active_user(authorization)
+    if user and user.get("role") != "SUPERADMIN":
+        raise HTTPException(status_code=403, detail="SuperAdmin role required to delete users.")
+    if user_id == "usr-superadmin":
+        raise HTTPException(status_code=400, detail="Cannot delete root SuperAdmin.")
+    success = delete_user(user_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="User not found.")
+    return {"status": "SUCCESS", "message": f"User {user_id} deleted successfully."}
 
 
 class QuickSwitchRequest(BaseModel):

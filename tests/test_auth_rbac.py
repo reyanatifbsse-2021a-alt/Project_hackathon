@@ -190,3 +190,103 @@ def test_api_list_and_update_roles():
     update_user_role(op["id"], "OPERATOR")
     restored_op = get_user_by_username("operator")
     assert restored_op["role"] == "OPERATOR"
+
+
+def test_user_data_isolation():
+    """Verify that regular user sees only their own tasks/audits, while SuperAdmin sees all."""
+    # 1. Login as operator
+    op_login = client.post("/api/auth/login", json={"username": "operator", "password": "operator123"})
+    op_token = op_login.json()["session_token"]
+    op_user = op_login.json()["user"]
+
+    # 2. Operator runs a task
+    task_res = client.post(
+        "/api/tasks/run",
+        headers={"Authorization": f"Bearer {op_token}"},
+        json={
+            "prompt": "Read patient PT-1001 diagnostic vitals and calculate hydration requirement",
+            "sector": "HEALTHCARE"
+        }
+    )
+    assert task_res.status_code == 200
+
+    # 3. Query audit trail as Operator
+    op_audit = client.get("/api/audit", headers={"Authorization": f"Bearer {op_token}"})
+    assert op_audit.status_code == 200
+    op_logs = op_audit.json()
+    assert len(op_logs) > 0
+    # Every log returned to operator must belong to operator
+    for log in op_logs:
+        assert log["user_id"] == op_user["id"]
+
+    # 4. Query audit trail as SuperAdmin
+    admin_login = client.post("/api/auth/login", json={"username": "superadmin", "password": "admin123"})
+    admin_token = admin_login.json()["session_token"]
+    admin_audit = client.get("/api/audit", headers={"Authorization": f"Bearer {admin_token}"})
+    assert admin_audit.status_code == 200
+    admin_logs = admin_audit.json()
+    # Superadmin sees operator's logs too
+    op_log_in_admin = any(l["user_id"] == op_user["id"] for l in admin_logs)
+    assert op_log_in_admin is True
+
+
+def test_non_admin_cannot_delete_users():
+    """Verify that non-admin users receive 403 Forbidden when attempting IAM deletion."""
+    op_login = client.post("/api/auth/login", json={"username": "operator", "password": "operator123"})
+    op_token = op_login.json()["session_token"]
+
+    del_res = client.delete("/api/auth/users/usr-auditor", headers={"Authorization": f"Bearer {op_token}"})
+    assert del_res.status_code == 403
+    assert "SuperAdmin" in del_res.json()["detail"]
+
+
+def test_superadmin_user_deletion_and_protection():
+    """Verify Superadmin can delete registered users, but root superadmin cannot be deleted."""
+    # Register ephemeral user
+    reg_res = client.post("/api/auth/register", json={
+        "username": "delete_me_soon",
+        "email": "deleteme@example.com",
+        "password": "Password123!",
+        "role": "OPERATOR"
+    })
+    target_uid = reg_res.json()["user"]["id"]
+
+    admin_login = client.post("/api/auth/login", json={"username": "superadmin", "password": "admin123"})
+    admin_token = admin_login.json()["session_token"]
+
+    # Superadmin deletes ephemeral user -> Success
+    del_res = client.delete(f"/api/auth/users/{target_uid}", headers={"Authorization": f"Bearer {admin_token}"})
+    assert del_res.status_code == 200
+
+    # Attempt to delete root superadmin -> Blocked with 400
+    del_root = client.delete("/api/auth/users/usr-superadmin", headers={"Authorization": f"Bearer {admin_token}"})
+    assert del_root.status_code == 400
+    assert "Cannot delete root SuperAdmin" in del_root.json()["detail"]
+
+
+def test_policy_admin_controls_and_rbacs():
+    """Verify non-admin cannot delete policies, while SuperAdmin can."""
+    op_login = client.post("/api/auth/login", json={"username": "operator", "password": "operator123"})
+    op_token = op_login.json()["session_token"]
+
+    admin_login = client.post("/api/auth/login", json={"username": "superadmin", "password": "admin123"})
+    admin_token = admin_login.json()["session_token"]
+
+    # Create dummy policy
+    pol_res = client.post("/api/policies", json={
+        "rule_id": "POL-TEST-DEL-001",
+        "sector": "FINTECH",
+        "name": "Test Deletable Policy",
+        "condition_code": "True",
+        "action": "BLOCK"
+    })
+    assert pol_res.status_code == 200
+
+    # Operator cannot delete policy (403)
+    op_del = client.delete("/api/policies/POL-TEST-DEL-001", headers={"Authorization": f"Bearer {op_token}"})
+    assert op_del.status_code == 403
+
+    # Superadmin deletes policy (200)
+    adm_del = client.delete("/api/policies/POL-TEST-DEL-001", headers={"Authorization": f"Bearer {admin_token}"})
+    assert adm_del.status_code == 200
+
