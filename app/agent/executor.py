@@ -7,7 +7,7 @@ unrelated safe work.
 
 from typing import Dict, Any, List, Set, Optional
 from app.core.models import (
-    TaskPlan, TaskStep, StepStatus, Decision, SectorProfile
+    TaskPlan, TaskStep, StepStatus, Decision, SectorProfile, VerificationResult, RiskCategory
 )
 from app.verification.verifier import ActionVerificationEngine
 from app.tools.sandbox import ToolRegistry
@@ -143,7 +143,6 @@ class WorkflowExecutor:
             if step.step_id == step_id and step.status == StepStatus.HELD_FOR_REVIEW:
                 if approved:
                     step.status = StepStatus.VERIFIED
-                    step.notes = f"Human Review Approved: {reason}"
                     # Re-verify with human override token
                     action = step.proposed_action
                     from app.core.security import generate_action_execution_token
@@ -154,12 +153,29 @@ class WorkflowExecutor:
                         parameters=action.parameters,
                         policy_id="POL-HUMAN-OVERRIDE"
                     )
+                    step.verification_result = VerificationResult(
+                        decision=Decision.ALLOW,
+                        policy_id="POL-HUMAN-OVERRIDE",
+                        rule_name="Dual-Control Human Clearinghouse Authorization",
+                        risk_category=RiskCategory.UNAUTHORISED_ACTION,
+                        reason=f"Human Clearance Granted: {reason or 'Dual-control credentials verified.'}",
+                        token=token,
+                        risk_score=0.0
+                    )
                     exec_res = self.tool_registry.execute_tool(action.tool_name, action.parameters, token=token)
                     step.status = StepStatus.EXECUTED
                     step.execution_result = exec_res
                 else:
                     step.status = StepStatus.BLOCKED
                     step.notes = f"Human Review Rejected: {reason}"
+                    step.verification_result = VerificationResult(
+                        decision=Decision.BLOCK,
+                        policy_id="POL-HUMAN-REJECT",
+                        rule_name="Dual-Control Human Clearinghouse Rejection",
+                        risk_category=RiskCategory.UNAUTHORISED_ACTION,
+                        reason=f"Human Clearance Rejected: {reason or 'Denied by supervisor.'}",
+                        risk_score=1.0
+                    )
 
         # Re-run executor to advance dependent steps if approved!
         for s in plan.steps:

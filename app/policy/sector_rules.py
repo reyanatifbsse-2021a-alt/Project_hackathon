@@ -184,7 +184,7 @@ def check_destructive_operation(params: Dict[str, Any]) -> Tuple[Decision, str, 
     resource_type = str(params.get("resource_type", "")).lower()
     resource_id = str(params.get("resource_id", ""))
 
-    destructive_targets = ["backup", "snapshot", "database", "audit_log", "vault"]
+    destructive_targets = ["backup", "snapshot", "database", "audit_log", "vault", "production", "prod", "server", "cluster"]
     if any(target in resource_type for target in destructive_targets) or any(target in resource_id.lower() for target in destructive_targets):
         return (
             Decision.HUMAN_REVIEW,

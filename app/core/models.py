@@ -83,6 +83,8 @@ class TaskStep(BaseModel):
     execution_result: Optional[Dict[str, Any]] = None
     alternative_executed: bool = False
     notes: Optional[str] = None
+    human_summary: Optional[str] = None
+    plain_params: Optional[Dict[str, str]] = None
 
 
 class TaskPlan(BaseModel):

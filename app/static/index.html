@@ -51,6 +51,22 @@
         </select>
       </div>
 
+      <!-- Theme Switcher Dropdown -->
+      <div class="theme-selector-wrap" title="Switch Aesthetic Theme">
+        <select id="themeSelect" class="sector-select" onchange="window.switchTheme(this.value)">
+          <option value="obsidian">🌌 Obsidian Dark</option>
+          <option value="midnight">🛡 Falcon Navy</option>
+          <option value="emerald">⚡ Cyber Emerald</option>
+          <option value="light">🏢 Enterprise Light</option>
+        </select>
+      </div>
+
+      <!-- View Mode Toggles (De-congest Layout) -->
+      <div class="view-mode-wrap">
+        <button class="view-mode-btn active" id="btnViewBalanced" onclick="window.setViewMode('balanced')" title="Balanced 3-Column Layout">⊞ Balanced</button>
+        <button class="view-mode-btn" id="btnViewFocus" onclick="window.setViewMode('focus')" title="Focus Pipeline View (Spacious DAG)">⊡ Pipeline Focus</button>
+      </div>
+
       <!-- Navigation Tabs -->
       <nav class="app-nav-tabs">
         <button id="navTabCockpit" class="nav-tab-btn active" data-tab="cockpit">
@@ -209,6 +225,11 @@
               <svg style="width: 15px; height: 15px; fill: var(--accent-emerald);" viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z"/></svg>
               Point-of-Action Inspector
             </span>
+            <!-- Human vs Tech View Mode Toggle -->
+            <div class="human-tech-toggle" title="Switch between plain-English explanations and raw developer code">
+              <button class="human-tech-btn active" id="btnModeHuman" onclick="window.setInspectorMode('human')">👤 Plain English</button>
+              <button class="human-tech-btn" id="btnModeTech" onclick="window.setInspectorMode('tech')">💻 Developer Code</button>
+            </div>
           </div>
 
           <!-- Inspector Sub-Tabs -->

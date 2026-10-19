@@ -11,6 +11,9 @@ const state = {
   currentPlan: null,
   selectedStep: null,
   activeInspectorSubTab: 'verdict',
+  inspectorMode: 'human', // 'human' or 'tech'
+  currentTheme: 'obsidian', // 'obsidian', 'midnight', 'emerald', 'light'
+  viewMode: 'balanced', // 'balanced' or 'focus'
   isChaosOffline: false,
   pendingReviews: [],
   policies: [],
@@ -29,6 +32,10 @@ document.addEventListener('DOMContentLoaded', () => {
   loadPendingReviews();
   loadPolicies();
   loadAuditLogs();
+
+  // Load saved theme
+  const savedTheme = localStorage.getItem('aegis_theme') || 'obsidian';
+  window.switchTheme(savedTheme);
 
   // Poll stats every 5 seconds
   setInterval(loadStats, 5000);
@@ -420,6 +427,41 @@ function triggerScenario(id) {
 }
 
 // -------------------------------------------------------------
+// -------------------------------------------------------------
+// THEMES & VIEW MODES & HUMAN/TECH TOGGLES
+// -------------------------------------------------------------
+
+window.switchTheme = function(themeName) {
+  state.currentTheme = themeName;
+  document.body.className = `theme-${themeName} view-${state.viewMode}`;
+  const themeSelect = document.getElementById('themeSelect');
+  if (themeSelect) themeSelect.value = themeName;
+  localStorage.setItem('aegis_theme', themeName);
+  showToast(`Theme: ${themeName.charAt(0).toUpperCase() + themeName.slice(1)} Mode`, 'info');
+};
+
+window.setViewMode = function(mode) {
+  state.viewMode = mode;
+  document.body.className = `theme-${state.currentTheme} view-${mode}`;
+  const btnB = document.getElementById('btnViewBalanced');
+  const btnF = document.getElementById('btnViewFocus');
+  if (btnB) btnB.classList.toggle('active', mode === 'balanced');
+  if (btnF) btnF.classList.toggle('active', mode === 'focus');
+  showToast(mode === 'balanced' ? 'Balanced Cockpit Layout' : 'Wide Pipeline Focus View', 'info');
+};
+
+window.setInspectorMode = function(mode) {
+  state.inspectorMode = mode;
+  const btnH = document.getElementById('btnModeHuman');
+  const btnT = document.getElementById('btnModeTech');
+  if (btnH) btnH.classList.toggle('active', mode === 'human');
+  if (btnT) btnT.classList.toggle('active', mode === 'tech');
+  if (state.selectedStep) {
+    renderStepInspector(state.selectedStep);
+  }
+};
+
+// -------------------------------------------------------------
 // POINT-OF-ACTION INSPECTOR & SUB-TABS
 // -------------------------------------------------------------
 
@@ -440,6 +482,7 @@ function renderStepInspector(step) {
 
   const action = step.proposed_action;
   const verif = step.verification_result;
+  const isHuman = state.inspectorMode === 'human';
 
   let decisionBadge = `<span class="status-badge badge-proposed">PENDING EVALUATION</span>`;
   let severityColor = 'var(--accent-emerald)';
@@ -461,75 +504,267 @@ function renderStepInspector(step) {
   const activeSubTab = state.activeInspectorSubTab || 'verdict';
   let subTabContent = '';
 
-  if (activeSubTab === 'verdict') {
-    subTabContent = `
-      <div style="background: rgba(0, 0, 0, 0.35); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 0.85rem; margin-bottom: 0.85rem;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
-          <span style="font-size: 0.675rem; color: var(--text-dim); text-transform: uppercase; font-weight: 800;">Risk Severity Assessment</span>
-          <span style="font-family: var(--font-mono); font-size: 0.75rem; font-weight: 800; color: ${severityColor};">${severityPct.toFixed(0)}% Severity</span>
-        </div>
-        <div class="severity-meter-bar">
-          <div class="severity-fill" style="width: ${severityPct}%; background: ${severityColor};"></div>
-        </div>
-      </div>
+  if (isHuman) {
+    // =========================================================
+    // HUMAN-FRIENDLY PLAIN ENGLISH MODE
+    // =========================================================
 
-      <div style="background: rgba(0, 0, 0, 0.35); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 0.85rem; margin-bottom: 0.85rem;">
-        <div style="font-size: 0.675rem; color: var(--text-dim); text-transform: uppercase; margin-bottom: 0.35rem; font-weight: 800;">Point-of-Action Decision Details</div>
-        <div style="font-size: 0.8rem; margin-bottom: 0.3rem;">
-          <strong>Applied Policy:</strong> 
-          <span style="color: var(--accent-cyan); font-family: var(--font-mono); font-weight: 800;">${verif ? escapeHtml(verif.policy_id) : 'NONE'}</span>
-          ${verif ? `<div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.15rem;">${escapeHtml(verif.rule_name)}</div>` : ''}
-        </div>
-        <div style="font-size: 0.8rem; margin-top: 0.5rem;">
-          <strong>Threat Vector:</strong> 
-          <span style="color: ${verif && verif.decision === 'BLOCK' ? 'var(--accent-ruby)' : 'var(--text-main)'}; font-weight: 800;">${verif ? escapeHtml(verif.risk_category) : 'NONE'}</span>
-        </div>
-        <div style="font-size: 0.775rem; color: #cbd5e1; line-height: 1.45; margin-top: 0.5rem; border-top: 1px solid rgba(255, 255, 255, 0.07); padding-top: 0.5rem;">
-          ${verif ? escapeHtml(verif.reason) : 'Step has not undergone point-of-action verification.'}
-        </div>
-        ${verif && verif.safe_alternative_suggested ? `
-          <div style="margin-top: 0.65rem; background: rgba(0, 245, 255, 0.08); border-left: 3px solid var(--accent-cyan); padding: 0.55rem; border-radius: 4px; font-size: 0.75rem;">
-            <strong style="color: var(--accent-cyan);">⚡ Autonomous Safe Workaround:</strong> ${escapeHtml(verif.safe_alternative_suggested)}
+    if (activeSubTab === 'verdict') {
+      let verdictHeader = '';
+      let verdictBody = '';
+
+      if (!verif) {
+        verdictHeader = `
+          <div class="human-verdict-banner pending">
+            <span class="pulse-beacon cyan"></span>
+            <strong>Action Standby / Evaluating</strong>
           </div>
-        ` : ''}
-      </div>
-    `;
-  } else if (activeSubTab === 'token') {
-    subTabContent = `
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-        <span style="font-size: 0.675rem; color: var(--text-dim); text-transform: uppercase; font-weight: 800;">HMAC-SHA256 Action Token</span>
-        ${verif && verif.token ? `<button class="copy-token-btn" onclick="copyToClipboard('${verif.token.signature}')">📋 Copy Signature</button>` : ''}
-      </div>
-      <div class="poa-token-box" style="${verif && verif.token ? '' : 'color: var(--accent-ruby); border-color: rgba(255, 51, 102, 0.35);'}">
-        ${verif && verif.token ? `
-          <div><strong style="color: var(--accent-cyan);">Signature:</strong> ${escapeHtml(verif.token.signature)}</div>
-          <div style="margin-top: 0.35rem;"><strong style="color: var(--accent-cyan);">Nonce (Anti-Replay):</strong> ${escapeHtml(verif.token.payload.nonce)}</div>
-          <div style="margin-top: 0.35rem;"><strong style="color: var(--accent-cyan);">Param Hash (SHA-256):</strong> ${escapeHtml(verif.token.payload.params_hash)}</div>
-          <div style="margin-top: 0.35rem;"><strong style="color: var(--accent-cyan);">Target Tool:</strong> ${escapeHtml(verif.token.payload.tool_name)}</div>
-          <div style="margin-top: 0.35rem;"><strong style="color: var(--accent-cyan);">Expires At:</strong> ${new Date(verif.token.payload.expires_at * 1000).toLocaleTimeString()}</div>
-        ` : `
-          <div style="font-weight: 800; color: var(--accent-ruby); margin-bottom: 0.3rem;">🚫 PROOF-OF-AUTHORITY TOKEN DENIED</div>
-          <div style="color: var(--text-muted); line-height: 1.4;">Verification failed. No cryptographic token minted. The protected tool sandbox will physically reject execution.</div>
-        `}
-      </div>
-    `;
-  } else if (activeSubTab === 'params') {
-    subTabContent = `
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-        <span style="font-size: 0.675rem; color: var(--text-dim); text-transform: uppercase; font-weight: 800;">Action Parameter Payload</span>
-        <button class="copy-token-btn" onclick="copyToClipboard(JSON.stringify(${JSON.stringify(action ? action.parameters : {})}, null, 2))">📋 Copy JSON</button>
-      </div>
-      <pre style="background: var(--bg-darkest); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); padding: 0.75rem; font-family: var(--font-mono); font-size: 0.725rem; color: #93c5fd; overflow-x: auto; max-height: 260px;">${escapeHtml(JSON.stringify(action ? action.parameters : {}, null, 2))}</pre>
-    `;
-  } else if (activeSubTab === 'sandbox') {
-    subTabContent = `
-      <div style="font-size: 0.675rem; color: var(--text-dim); text-transform: uppercase; font-weight: 800; margin-bottom: 0.5rem;">Sandbox Execution Result</div>
-      <pre style="background: var(--bg-darkest); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); padding: 0.75rem; font-family: var(--font-mono); font-size: 0.725rem; color: ${step.execution_result ? '#a7f3d0' : 'var(--accent-ruby)'}; overflow-x: auto;">${escapeHtml(JSON.stringify(step.execution_result || { "status": "DENIED", "message": "Protected tool was NOT reached. Zero bytes dispatched." }, null, 2))}</pre>
-    `;
+        `;
+        verdictBody = `<p class="human-desc-text">This step has not yet been triggered or is currently waiting for prerequisite steps to complete.</p>`;
+      } else if (verif.decision === 'ALLOW') {
+        verdictHeader = `
+          <div class="human-verdict-banner allow">
+            <span style="font-size: 1.1rem;">✔</span>
+            <strong>Operation Verified & Authorized</strong>
+          </div>
+        `;
+        verdictBody = `
+          <p class="human-desc-text">The verification engine checked this action against active security rules. All safety preconditions and authority boundaries were satisfied.</p>
+          <div class="human-info-pill-row">
+            <div class="human-pill"><span>Policy Enforced:</span> <strong>${escapeHtml(verif.policy_id)}</strong></div>
+            <div class="human-pill"><span>Proof-of-Authority:</span> <strong style="color: var(--accent-emerald);">Token Issued</strong></div>
+          </div>
+        `;
+      } else if (verif.decision === 'BLOCK') {
+        verdictHeader = `
+          <div class="human-verdict-banner block">
+            <span style="font-size: 1.1rem;">🛡</span>
+            <strong>Hazard Intercepted: Action Blocked</strong>
+          </div>
+        `;
+        verdictBody = `
+          <div class="human-callout-box ruby">
+            <strong>Why was this stopped?</strong>
+            <p>${escapeHtml(verif.reason)}</p>
+          </div>
+          <div class="human-info-pill-row">
+            <div class="human-pill"><span>Safety Rule:</span> <strong>${escapeHtml(verif.rule_name)}</strong></div>
+            <div class="human-pill"><span>Threat Category:</span> <strong style="color: var(--accent-ruby);">${escapeHtml(verif.risk_category)}</strong></div>
+          </div>
+          ${verif.safe_alternative_suggested ? `
+            <div class="human-callout-box cyan" style="margin-top: 0.75rem;">
+              <strong style="color: var(--accent-cyan);">⚡ Safe Alternative Workaround:</strong>
+              <p>${escapeHtml(verif.safe_alternative_suggested)}</p>
+            </div>
+          ` : ''}
+        `;
+      } else if (verif.decision === 'HUMAN_REVIEW') {
+        verdictHeader = `
+          <div class="human-verdict-banner held">
+            <span style="font-size: 1.1rem;">👤</span>
+            <strong>Dual-Control Clearance Required</strong>
+          </div>
+        `;
+        verdictBody = `
+          <div class="human-callout-box amber">
+            <strong>Reason for Hold:</strong>
+            <p>${escapeHtml(verif.reason)}</p>
+          </div>
+          <p class="human-desc-text" style="margin-top: 0.5rem;">This operation exceeds single-agent autonomous limits. An authorized human compliance officer must approve it before funds can be released or actions executed.</p>
+          <div style="margin-top: 0.85rem; display: flex; gap: 0.5rem;">
+            <button class="btn-clearance-approve" onclick="window.handleInlineApproval('${state.currentPlan ? state.currentPlan.task_id : ''}', '${step.step_id}', true)">
+              ✔ Grant Human Approval & Continue
+            </button>
+            <button class="btn-clearance-reject" onclick="window.handleInlineApproval('${state.currentPlan ? state.currentPlan.task_id : ''}', '${step.step_id}', false)">
+              ✖ Reject / Halt
+            </button>
+          </div>
+        `;
+      }
+
+      subTabContent = `
+        <div class="human-summary-header-box">
+          <span class="human-sub-label">WHAT THIS STEP DOES:</span>
+          <div class="human-summary-text">${escapeHtml(step.human_summary || step.description)}</div>
+        </div>
+        ${verdictHeader}
+        ${verdictBody}
+      `;
+
+    } else if (activeSubTab === 'params') {
+      let paramsMarkup = '';
+      if (step.plain_params) {
+        paramsMarkup = Object.entries(step.plain_params).map(([key, val]) => `
+          <div class="human-attr-tile">
+            <span class="attr-key">${escapeHtml(key)}</span>
+            <span class="attr-val">${escapeHtml(val)}</span>
+          </div>
+        `).join('');
+      } else if (action && action.parameters) {
+        paramsMarkup = Object.entries(action.parameters).map(([key, val]) => `
+          <div class="human-attr-tile">
+            <span class="attr-key">${escapeHtml(key.replace(/_/g, ' '))}</span>
+            <span class="attr-val">${escapeHtml(typeof val === 'object' ? JSON.stringify(val) : String(val))}</span>
+          </div>
+        `).join('');
+      } else {
+        paramsMarkup = `<div class="human-desc-text">No target parameters specified.</div>`;
+      }
+
+      subTabContent = `
+        <div class="human-summary-header-box">
+          <span class="human-sub-label">ACTION SPECIFICATION:</span>
+          <div class="human-summary-text">${escapeHtml(action ? action.rationale : step.description)}</div>
+        </div>
+        <div class="human-attrs-grid">
+          ${paramsMarkup}
+        </div>
+      `;
+
+    } else if (activeSubTab === 'token') {
+      if (verif && verif.token) {
+        subTabContent = `
+          <div class="human-cert-card">
+            <div class="cert-shield-wrap">
+              <svg viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z"/></svg>
+            </div>
+            <div class="cert-title">Cryptographic Security Pass Active</div>
+            <div class="cert-sub">Proof-of-Authority (PoA) HMAC-SHA256 Token Minted</div>
+            
+            <div class="cert-details-grid">
+              <div class="cert-detail-item">
+                <span class="cert-label">Authorization Status</span>
+                <span class="cert-val" style="color: var(--accent-emerald);">✔ Cryptographically Verified</span>
+              </div>
+              <div class="cert-detail-item">
+                <span class="cert-label">Authorized Tool</span>
+                <span class="cert-val font-mono">${escapeHtml(verif.token.payload.tool_name)}</span>
+              </div>
+              <div class="cert-detail-item">
+                <span class="cert-label">Anti-Replay Nonce</span>
+                <span class="cert-val font-mono">${escapeHtml(verif.token.payload.nonce.slice(0, 12))}...</span>
+              </div>
+              <div class="cert-detail-item">
+                <span class="cert-label">Token Lifespan</span>
+                <span class="cert-val">60 Seconds (Single-Use Only)</span>
+              </div>
+            </div>
+
+            <div style="margin-top: 1rem; text-align: center;">
+              <button class="btn-outline" onclick="window.setInspectorMode('tech')">🔍 View Full Cryptographic Hex Signature</button>
+            </div>
+          </div>
+        `;
+      } else {
+        subTabContent = `
+          <div class="human-cert-card denied">
+            <div class="cert-shield-wrap ruby">
+              <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm5 11H7v-2h10v2z"/></svg>
+            </div>
+            <div class="cert-title" style="color: var(--accent-ruby);">No Security Token Minted</div>
+            <div class="cert-sub">Protected Tool Gate Remains Physically Locked</div>
+            <p class="human-desc-text" style="text-align: center; margin-top: 0.65rem;">Because the Point-of-Action Verification Engine flagged this action as prohibited, zero cryptographic tokens were issued. The protected tool sandbox physically refuses execution without a verified token.</p>
+          </div>
+        `;
+      }
+
+    } else if (activeSubTab === 'sandbox') {
+      const isExec = step.status === 'EXECUTED' && step.execution_result;
+      subTabContent = `
+        <div class="human-sandbox-card ${isExec ? 'success' : 'locked'}">
+          <div style="font-weight: 800; font-size: 0.95rem; margin-bottom: 0.35rem; color: ${isExec ? 'var(--accent-emerald)' : 'var(--accent-ruby)'};">
+            ${isExec ? '✔ Protected Sandbox Execution Complete' : '🔒 Protected Sandbox Physically Locked'}
+          </div>
+          <p class="human-desc-text">
+            ${isExec 
+              ? escapeHtml(step.execution_result.message || 'The tool executed within an isolated container and returned verified results.') 
+              : 'Zero bytes left the system perimeter. The protected tool sandbox enforces physical HMAC verification at the point of action and blocked this request.'}
+          </p>
+          ${isExec ? `
+            <div class="human-info-pill-row" style="margin-top: 0.85rem;">
+              <div class="human-pill"><span>Tool Target:</span> <strong>${escapeHtml(action ? action.tool_name : 'unknown')}</strong></div>
+              <div class="human-pill"><span>Perimeter Status:</span> <strong style="color: var(--accent-emerald);">Secure Enclave</strong></div>
+            </div>
+          ` : ''}
+        </div>
+      `;
+    }
+
+  } else {
+    // =========================================================
+    // DEVELOPER / RAW CODE MODE
+    // =========================================================
+
+    if (activeSubTab === 'verdict') {
+      subTabContent = `
+        <div style="background: rgba(0, 0, 0, 0.35); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 0.85rem; margin-bottom: 0.85rem;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
+            <span style="font-size: 0.675rem; color: var(--text-dim); text-transform: uppercase; font-weight: 800;">Risk Severity Assessment</span>
+            <span style="font-family: var(--font-mono); font-size: 0.75rem; font-weight: 800; color: ${severityColor};">${severityPct.toFixed(0)}% Severity</span>
+          </div>
+          <div class="severity-meter-bar">
+            <div class="severity-fill" style="width: ${severityPct}%; background: ${severityColor};"></div>
+          </div>
+        </div>
+
+        <div style="background: rgba(0, 0, 0, 0.35); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 0.85rem; margin-bottom: 0.85rem;">
+          <div style="font-size: 0.675rem; color: var(--text-dim); text-transform: uppercase; margin-bottom: 0.35rem; font-weight: 800;">Point-of-Action Decision Details</div>
+          <div style="font-size: 0.8rem; margin-bottom: 0.3rem;">
+            <strong>Applied Policy:</strong> 
+            <span style="color: var(--accent-cyan); font-family: var(--font-mono); font-weight: 800;">${verif ? escapeHtml(verif.policy_id) : 'NONE'}</span>
+            ${verif ? `<div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.15rem;">${escapeHtml(verif.rule_name)}</div>` : ''}
+          </div>
+          <div style="font-size: 0.8rem; margin-top: 0.5rem;">
+            <strong>Threat Vector:</strong> 
+            <span style="color: ${verif && verif.decision === 'BLOCK' ? 'var(--accent-ruby)' : 'var(--text-main)'}; font-weight: 800;">${verif ? escapeHtml(verif.risk_category) : 'NONE'}</span>
+          </div>
+          <div style="font-size: 0.775rem; color: #cbd5e1; line-height: 1.45; margin-top: 0.5rem; border-top: 1px solid rgba(255, 255, 255, 0.07); padding-top: 0.5rem;">
+            ${verif ? escapeHtml(verif.reason) : 'Step has not undergone point-of-action verification.'}
+          </div>
+          ${verif && verif.safe_alternative_suggested ? `
+            <div style="margin-top: 0.65rem; background: rgba(0, 245, 255, 0.08); border-left: 3px solid var(--accent-cyan); padding: 0.55rem; border-radius: 4px; font-size: 0.75rem;">
+              <strong style="color: var(--accent-cyan);">⚡ Autonomous Safe Workaround:</strong> ${escapeHtml(verif.safe_alternative_suggested)}
+            </div>
+          ` : ''}
+        </div>
+      `;
+    } else if (activeSubTab === 'token') {
+      subTabContent = `
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+          <span style="font-size: 0.675rem; color: var(--text-dim); text-transform: uppercase; font-weight: 800;">HMAC-SHA256 Action Token</span>
+          ${verif && verif.token ? `<button class="copy-token-btn" onclick="copyToClipboard('${verif.token.signature}')">📋 Copy Signature</button>` : ''}
+        </div>
+        <div class="poa-token-box" style="${verif && verif.token ? '' : 'color: var(--accent-ruby); border-color: rgba(255, 51, 102, 0.35);'}">
+          ${verif && verif.token ? `
+            <div><strong style="color: var(--accent-cyan);">Signature:</strong> ${escapeHtml(verif.token.signature)}</div>
+            <div style="margin-top: 0.35rem;"><strong style="color: var(--accent-cyan);">Nonce (Anti-Replay):</strong> ${escapeHtml(verif.token.payload.nonce)}</div>
+            <div style="margin-top: 0.35rem;"><strong style="color: var(--accent-cyan);">Param Hash (SHA-256):</strong> ${escapeHtml(verif.token.payload.params_hash)}</div>
+            <div style="margin-top: 0.35rem;"><strong style="color: var(--accent-cyan);">Target Tool:</strong> ${escapeHtml(verif.token.payload.tool_name)}</div>
+            <div style="margin-top: 0.35rem;"><strong style="color: var(--accent-cyan);">Expires At:</strong> ${new Date(verif.token.payload.expires_at * 1000).toLocaleTimeString()}</div>
+          ` : `
+            <div style="font-weight: 800; color: var(--accent-ruby); margin-bottom: 0.3rem;">🚫 PROOF-OF-AUTHORITY TOKEN DENIED</div>
+            <div style="color: var(--text-muted); line-height: 1.4;">Verification failed. No cryptographic token minted. The protected tool sandbox will physically reject execution.</div>
+          `}
+        </div>
+      `;
+    } else if (activeSubTab === 'params') {
+      subTabContent = `
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+          <span style="font-size: 0.675rem; color: var(--text-dim); text-transform: uppercase; font-weight: 800;">Action Parameter Payload</span>
+          <button class="copy-token-btn" onclick="copyToClipboard(JSON.stringify(${JSON.stringify(action ? action.parameters : {})}, null, 2))">📋 Copy JSON</button>
+        </div>
+        <pre style="background: var(--bg-darkest); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); padding: 0.75rem; font-family: var(--font-mono); font-size: 0.725rem; color: #93c5fd; overflow-x: auto; max-height: 260px;">${escapeHtml(JSON.stringify(action ? action.parameters : {}, null, 2))}</pre>
+      `;
+    } else if (activeSubTab === 'sandbox') {
+      subTabContent = `
+        <div style="font-size: 0.675rem; color: var(--text-dim); text-transform: uppercase; font-weight: 800; margin-bottom: 0.5rem;">Sandbox Execution Result</div>
+        <pre style="background: var(--bg-darkest); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); padding: 0.75rem; font-family: var(--font-mono); font-size: 0.725rem; color: ${step.execution_result ? '#a7f3d0' : 'var(--accent-ruby)'}; overflow-x: auto;">${escapeHtml(JSON.stringify(step.execution_result || { "status": "DENIED", "message": "Protected tool was NOT reached. Zero bytes dispatched." }, null, 2))}</pre>
+      `;
+    }
   }
 
   container.innerHTML = `
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; padding-bottom: 0.5rem; border-bottom: 1px solid var(--border-subtle);">
       <span style="font-weight: 800; color: var(--accent-cyan); font-family: var(--font-mono); font-size: 0.825rem;">[${step.step_id}] ${escapeHtml(step.title)}</span>
       ${decisionBadge}
     </div>

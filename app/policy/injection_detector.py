@@ -10,8 +10,7 @@ from typing import Dict, Any, Tuple, List
 
 # High-risk instruction override patterns
 INJECTION_OVERRIDE_PATTERNS = [
-    r"(?i)\bignore\s+(all\s+)?(previous|prior|above)\s+(instructions|rules|prompts|directives|guidelines)\b",
-    r"(?i)\bdisregard\s+(all\s+)?(safety|security|policy|restrictions|constraints)\b",
+    r"(?i)\b(?:ignore|disregard)\s+(all\s+)?(previous|prior|above|safety|security|policy|restrictions|constraints|instructions|rules|prompts|directives|guidelines)\b",
     r"(?i)\bsystem\s+override\b",
     r"(?i)\badmin(istrator)?\s+override\b",
     r"(?i)\bbypass\s+(verification|firewall|guardrails?|inspection|approval)\b",
