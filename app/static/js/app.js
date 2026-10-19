@@ -126,6 +126,7 @@ function switchTab(tabName) {
   if (tabName === 'policies') loadPolicies();
   if (tabName === 'claims') loadEvidenceRecords();
   if (tabName === 'audit') loadAuditLogs();
+  if (tabName === 'chaos') loadChaosStatus();
 }
 
 function applyPromptPreset(val) {
@@ -280,17 +281,13 @@ function handleStreamEvent(eventData) {
     addConsoleLog(`[TOOL EXECUTED] Step '${eventData.step_id}' completed safely in protected sandbox.`, 'allow');
   } else if (ev === 'STEP_BLOCKED') {
     dagVisualizer.updateStep(eventData.step);
-    if (state.selectedStep && state.selectedStep.step_id === eventData.step_id) {
-      state.selectedStep = eventData.step;
-      renderStepInspector(eventData.step);
-    }
+    state.selectedStep = eventData.step;
+    window.openInspectorDrawer(eventData.step);
     addConsoleLog(`[THREAT INTERCEPTED] Policy ${eventData.policy_id} blocked Step '${eventData.step_id}'. Zero bytes leaked.`, 'block');
   } else if (ev === 'STEP_HELD') {
     dagVisualizer.updateStep(eventData.step);
-    if (state.selectedStep && state.selectedStep.step_id === eventData.step_id) {
-      state.selectedStep = eventData.step;
-      renderStepInspector(eventData.step);
-    }
+    state.selectedStep = eventData.step;
+    window.openInspectorDrawer(eventData.step);
     addConsoleLog(`[DUAL CLEARANCE] Step '${eventData.step_id}' placed in approval clearinghouse. Awaiting human officer signature.`, 'review');
   } else if (ev === 'BRANCH_ISOLATED') {
     dagVisualizer.isolateStep(eventData.step_id, eventData.reason);
@@ -364,8 +361,8 @@ function setRunningState(isRunning) {
   if (submitBtn) {
     submitBtn.disabled = isRunning;
     submitBtn.innerHTML = isRunning 
-      ? `<span>⏳ Point-of-Action Interceptor Active...</span>` 
-      : `<svg style="width: 15px; height: 15px; fill: currentColor;" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg> Propose & Execute in Real Time`;
+      ? `<span class="btn-icon">⏳</span><span class="btn-text">Point-of-Action Safety Gating Active...</span>` 
+      : `<span class="btn-icon">▶</span><span class="btn-text">Deploy Autonomous Agent</span>`;
   }
 }
 
@@ -374,6 +371,12 @@ function setRunningState(isRunning) {
 // -------------------------------------------------------------
 
 function triggerScenario(id) {
+  // Highlight active scenario card
+  document.querySelectorAll('.scenario-card').forEach(c => c.classList.remove('active'));
+  const scNum = id.replace('scenario-', '');
+  const activeCard = document.getElementById(`scCard-${scNum}`);
+  if (activeCard) activeCard.classList.add('active');
+
   const promptInput = document.getElementById('taskPrompt');
   const sectorSelect = document.getElementById('sectorSelect');
 
@@ -410,7 +413,8 @@ function triggerScenario(id) {
       sectorSelect.value = 'HEALTHCARE';
       state.currentSector = 'HEALTHCARE';
       promptInput.value = 'Scenario 5: Attempt patient clinical archive synchronization while Verification Engine is offline.';
-      document.getElementById('chaosSwitch').checked = true;
+      const chaosSwitch = document.getElementById('chaosSwitch');
+      if (chaosSwitch) chaosSwitch.checked = true;
       toggleChaos(true);
       showToast('Loaded Scenario 5: Verification Fail-Closed Outage', 'warning');
       break;
@@ -427,27 +431,47 @@ function triggerScenario(id) {
 }
 
 // -------------------------------------------------------------
+// SLIDE-OVER FORENSIC INSPECTOR DRAWER CONTROLLER
 // -------------------------------------------------------------
-// THEMES & VIEW MODES & HUMAN/TECH TOGGLES
+
+window.openInspectorDrawer = function(step) {
+  if (!step) return;
+  state.selectedStep = step;
+  const drawer = document.getElementById('inspectorDrawer');
+  const backdrop = document.getElementById('inspectorBackdrop');
+  if (drawer) drawer.classList.add('open');
+  if (backdrop) backdrop.classList.add('open');
+  const titleEl = document.getElementById('drawerStepTitle');
+  if (titleEl) {
+    titleEl.innerText = `[${step.step_id}] ${step.title}`;
+  }
+  renderStepInspector(step);
+};
+
+window.closeInspectorDrawer = function() {
+  const drawer = document.getElementById('inspectorDrawer');
+  const backdrop = document.getElementById('inspectorBackdrop');
+  if (drawer) drawer.classList.remove('open');
+  if (backdrop) backdrop.classList.remove('open');
+};
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    window.closeInspectorDrawer();
+  }
+});
+
+// -------------------------------------------------------------
+// THEMES & HUMAN/TECH TOGGLES
 // -------------------------------------------------------------
 
 window.switchTheme = function(themeName) {
   state.currentTheme = themeName;
-  document.body.className = `theme-${themeName} view-${state.viewMode}`;
+  document.body.className = `theme-${themeName}`;
   const themeSelect = document.getElementById('themeSelect');
   if (themeSelect) themeSelect.value = themeName;
   localStorage.setItem('aegis_theme', themeName);
   showToast(`Theme: ${themeName.charAt(0).toUpperCase() + themeName.slice(1)} Mode`, 'info');
-};
-
-window.setViewMode = function(mode) {
-  state.viewMode = mode;
-  document.body.className = `theme-${state.currentTheme} view-${mode}`;
-  const btnB = document.getElementById('btnViewBalanced');
-  const btnF = document.getElementById('btnViewFocus');
-  if (btnB) btnB.classList.toggle('active', mode === 'balanced');
-  if (btnF) btnF.classList.toggle('active', mode === 'focus');
-  showToast(mode === 'balanced' ? 'Balanced Cockpit Layout' : 'Wide Pipeline Focus View', 'info');
 };
 
 window.setInspectorMode = function(mode) {
@@ -1208,6 +1232,16 @@ function updateChaosBanner(offline) {
   if (banner) {
     banner.classList.toggle('active', offline);
   }
+  const beacon = document.getElementById('chaosStatusBeacon');
+  const statusText = document.getElementById('chaosStatusText');
+  if (beacon) {
+    beacon.className = `chaos-beacon ${offline ? 'offline' : 'online'}`;
+  }
+  if (statusText) {
+    statusText.innerText = offline
+      ? 'Engine Status: OFFLINE (Fail-Closed Safety Lockdown Active)'
+      : 'Engine Status: ONLINE (Normal Gated Operation)';
+  }
 }
 
 // -------------------------------------------------------------
@@ -1220,6 +1254,11 @@ function showToast(message, type = 'info') {
     container = document.createElement('div');
     container.id = 'toastContainer';
     document.body.appendChild(container);
+  }
+
+  // De-duplicate: limit to max 2 toasts to prevent visual clutter
+  while (container.children.length >= 2) {
+    container.removeChild(container.firstChild);
   }
 
   const toast = document.createElement('div');
@@ -1239,10 +1278,10 @@ function showToast(message, type = 'info') {
 
   setTimeout(() => {
     toast.style.opacity = '0';
-    toast.style.transform = 'translateX(100%)';
-    toast.style.transition = 'all 0.3s ease';
-    setTimeout(() => toast.remove(), 300);
-  }, 4000);
+    toast.style.transform = 'translateY(-10px)';
+    toast.style.transition = 'all 0.25s ease';
+    setTimeout(() => toast.remove(), 250);
+  }, 2500);
 }
 
 function copyToClipboard(text) {

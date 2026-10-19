@@ -148,8 +148,10 @@ class DagVisualizer {
   createStepNodeElement(step, index) {
     const el = document.createElement('div');
     el.className = `dag-step-node node-${step.status.toLowerCase()}`;
-    el.id = `node-${step.step_id}`;
-    el.onclick = () => this.selectNode(step.step_id);
+    el.onclick = () => {
+      this.selectNode(step.step_id);
+      if (window.openInspectorDrawer) window.openInspectorDrawer(step);
+    };
 
     const stepNum = String(index + 1).padStart(2, '0');
     const isProtected = step.proposed_action ? step.proposed_action.is_protected : false;
@@ -244,6 +246,12 @@ class DagVisualizer {
         ` : ''}
 
         ${inlineClearanceMarkup}
+
+        <div class="step-card-footer">
+          <button class="btn-inspect-step" onclick="event.stopPropagation(); if (window.openInspectorDrawer) window.openInspectorDrawer(dagVisualizer.currentPlan.steps.find(s => s.step_id === '${step.step_id}'));">
+            🔍 View Safety Proof & Plain Breakdown →
+          </button>
+        </div>
       </div>
     `;
 
